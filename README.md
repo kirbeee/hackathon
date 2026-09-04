@@ -4,7 +4,7 @@
 >
 > 讓創意被資產化，讓投資被自動化。
 
-## 1. 專案簡介
+# 1. 專案簡介
 
 本專案是一個結合 **Real World Assets（RWA）、區塊鏈智能合約與 AI Agent** 的新型募資與投資平台。
 
@@ -300,7 +300,7 @@ Wallet
 執行交易
 ```
 
-使用者不需要每一次都手動操作。
+使用者不需要每一次都手動操作。這邊可以具備安全性
 
 ---
 
@@ -381,13 +381,13 @@ Smart Contract
      ├── Investor B → USDC
      └── Investor C → USDC
 ```
-
+ToDo : 智能合約這一塊要驗證
 智能合約可以根據 RWA Token 的持有比例或指定條件，自動進行資金分配。
 
 ---
 
 # 9. Wallet Integration
-
+ToDo: Wallet 是託管在平台上，使用者是在跟平台互動
 使用者透過 Wallet 與平台互動。
 
 ```text
@@ -532,98 +532,6 @@ Risk
 * Buy
 * Hold
 * Sell
-
----
-
-# 12. 平台對不同角色的價值
-
-## 投資人
-
-### 傳統投資
-
-```text
-自己找資料
- ↓
-自己分析
- ↓
-自己決定
- ↓
-自己盯盤
- ↓
-自己交易
-```
-
-### 我們的平台
-
-```text
-設定投資目標
- ↓
-AI Agent 分析
- ↓
-AI Agent 制定策略
- ↓
-自動執行
- ↓
-持續監控
-```
-
-降低一般使用者參與複雜投資商品的操作門檻。
-
----
-
-## 募資者
-
-可以透過平台：
-
-* 發起專案
-* 將資產 Tokenization
-* 接觸更多投資人
-* 取得資金
-* 透過智能合約管理資金
-
-讓「有創意但缺乏資源」的專案獲得新的募資管道。
-
----
-
-## 國泰金控
-
-平台可以為金融機構創造：
-
-### ① RWA 發行與管理服務
-
-金融機構可以成為：
-
-* RWA 發行平台
-* 資產管理者
-* 金融服務提供者
-
-### ② 交易與服務收入
-
-未來可透過：
-
-* Token 發行費
-* 交易手續費
-* 資產管理費
-* AI Agent 服務費
-
-建立商業模式。
-
-### ③ 金融機構的信任角色
-
-RWA 市場最大的問題之一是：
-
-> **「鏈上的 Token，背後的資產到底是不是真的？」**
-
-金融機構可以提供：
-
-* KYC
-* 資產驗證
-* 風險管理
-* 託管
-* 合規
-* 信用背書
-
-因此，金融機構不是單純「發幣」，而是成為 RWA 生態系中的 **Trusted Financial Infrastructure**。
 
 ---
 
@@ -813,45 +721,11 @@ AI Agent 不應該擁有無限制的資金權限。
 
 ---
 
-# 18. MVP 功能
-
-### Frontend
-
-* Wallet Connect
-* RWA Token 列表
-* RWA 詳細資訊
-* AI 投資分析
-* Risk Score
-* Portfolio
-* Buy / Sell
-* Agent Status
-
-### AI Agent
-
-* RWA 資訊分析
-* 投資風險評估
-* 投資組合配置
-* Buy / Hold / Sell 判斷
-* 自然語言投資策略
-* 外部資訊監控
-
-### Smart Contract
-
-* RWA Token
-* Wallet
-* Funding Pool
-* USDC 模擬資產
-* Token Transfer
-* Automated Distribution
-* Buy / Sell Demo
-
----
-
 # 19. Demo 情境
 
 我們的 2–3 分鐘 Demo 可以採用以下故事：
 
-### Scene 1 — 新創募資
+## Scene 1 — 新創募資
 
 一間半導體新創公司需要購買研究設備。
 
@@ -864,7 +738,7 @@ $1,000,000 USDC
 
 ---
 
-### Scene 2 — 投資人進場
+## Scene 2 — 投資人進場
 
 使用者連接 Wallet。
 
@@ -876,7 +750,7 @@ AI Agent 開始分析。
 
 ---
 
-### Scene 3 — AI Agent 投資
+## Scene 3 — AI Agent 投資
 
 Agent 分析多個 RWA：
 
@@ -898,7 +772,7 @@ Agent 自動配置資金。
 
 ---
 
-### Scene 4 — 市場變化
+## Scene 4 — 市場變化
 
 Agent 發現：
 
@@ -915,7 +789,7 @@ Risk Score
 
 ---
 
-### Scene 5 — 自動賣出
+## Scene 5 — 自動賣出
 
 Agent 觸發：
 
@@ -1018,77 +892,6 @@ Smart Contract 執行交易。
 
 ---
 
-# 23. 競賽定位
-
-本專案對應：
-
-> **國泰金控 Track 01：AI Agent × 區塊鏈企業創新**
-
-核心關鍵字：
-
-```text
-AI Agent
-RWA
-Blockchain
-Smart Contract
-Wallet
-Automated Investment
-Tokenization
-Crowdfunding
-Risk Management
-Financial Institution
-```
-
----
-
-# 24. 核心價值主張
-
-我們希望用一句話說清楚這個專案：
-
-> **「讓任何有價值的創意都能被資產化，讓任何投資人都能擁有自己的 AI 基金經理人。」**
-
-或者更偏向金融機構的版本：
-
-> **「以 RWA 打開資產投資入口，以 AI Agent 自動化投資決策，透過金融機構建立可信任的鏈上金融基礎設施。」**
-
----
-
-# 25. Roadmap
-
-### Phase 1 — Hackathon MVP
-
-* [x] RWA 概念設計
-* [ ] RWA Token Demo
-* [ ] Smart Contract
-* [ ] Demo Chain
-* [ ] Wallet
-* [ ] AI Agent
-* [ ] Risk Score
-* [ ] Buy / Sell
-* [ ] Frontend
-* [ ] Demo Video
-
-### Phase 2 — Prototype
-
-* [ ] 真實 RWA Data
-* [ ] 外部資訊 Agent
-* [ ] Portfolio Management
-* [ ] Advanced Risk Model
-* [ ] Permission System
-* [ ] Transaction Monitoring
-
-### Phase 3 — Financial Platform
-
-* [ ] RWA Issuance
-* [ ] KYC / AML
-* [ ] Asset Verification
-* [ ] Custody
-* [ ] Institutional Integration
-* [ ] Compliance
-* [ ] Real-world Financial Products
-
----
-
 # 26. Disclaimer
 
 本專案目前為 Hackathon / Proof of Concept。
@@ -1105,6 +908,8 @@ Demo 中使用的 RWA Token、USDC、資產價格及交易皆為測試或模擬�
 * 智能合約安全
 * AI 決策風險
 * 使用者資產安全
+
+風險如何可控
 
 ---
 
