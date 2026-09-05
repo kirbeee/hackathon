@@ -6,9 +6,6 @@ import { useClient } from "@solana/react";
 import {
   claimInvestmentRewardAction,
   completePaidSharePurchaseAction,
-  farmerBuyBackAllAction,
-  runAnnualSettlementAction,
-  setInvestmentStatusAction,
   validatePaymentReportingAction,
   type InvestmentActionState,
 } from "@/lib/actions";
@@ -20,7 +17,6 @@ import type {
   InvestmentTerms,
   InvestorPosition,
   PaymentCurrency,
-  ProjectStatus,
 } from "@/lib/types";
 
 const initialState: InvestmentActionState = { status: "idle" };
@@ -68,21 +64,9 @@ export function InvestmentPanel({
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
   const soldOut = investment.mintedShares >= investment.totalShares;
-  const remaining = investment.totalShares - investment.mintedShares;
+  const remaining = Math.max(0, investment.totalShares - investment.mintedShares);
   const [claimState, claimAction, claimPending] = useActionState(
     claimInvestmentRewardAction.bind(null, slug),
-    initialState
-  );
-  const [settleState, settleAction, settlePending] = useActionState(
-    runAnnualSettlementAction.bind(null, slug),
-    initialState
-  );
-  const [buybackState, buybackAction, buybackPending] = useActionState(
-    farmerBuyBackAllAction.bind(null, slug),
-    initialState
-  );
-  const [statusState, statusAction, statusPending] = useActionState(
-    setInvestmentStatusAction.bind(null, slug),
     initialState
   );
   const [currency, setCurrency] = useState<PaymentCurrency>("USDC");
@@ -186,7 +170,7 @@ export function InvestmentPanel({
         <InfoRow label="建設成本" value={formatTWDT(investment.buildCost)} />
         <InfoRow label="年收益" value={formatTWDT(investment.annualIncome)} />
         <InfoRow label="投資人分潤" value={`${investment.investorSharePercent}%`} />
-        <InfoRow label="目前年度" value={`第 ${investment.currentYear} 年`} />
+        <InfoRow label="目前年度" value={investment.currentYear === 0 ? "募資中" : `第 ${investment.currentYear} 年`} />
         <InfoRow label="持有人數" value={`${investment.holderCount} 人`} />
         <InfoRow label="專案狀態" value={STATUS_LABELS[investment.status]} />
       </div>
@@ -347,63 +331,6 @@ export function InvestmentPanel({
         )}
       </form>
 
-      <div className="flex flex-col gap-3 border-t border-border pt-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-foreground/40">
-          平台管理（Demo 模擬）
-        </p>
-
-        <form action={settleAction}>
-          <button
-            type="submit"
-            disabled={settlePending || !soldOut || investment.status !== 1}
-            className="w-full rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:border-brand/50 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
-          >
-            {settlePending ? "結算中…" : "執行年度結算"}
-          </button>
-        </form>
-        <ActionMessage state={settleState} />
-
-        <form action={buybackAction}>
-          <button
-            type="submit"
-            disabled={
-              buybackPending ||
-              !soldOut ||
-              investment.status !== 1 ||
-              investment.buybackPrice <= 0 ||
-              investment.buybackActive
-            }
-            className="w-full rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:border-brand/50 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
-          >
-            {buybackPending
-              ? "買回中…"
-              : `農夫買回全部${investment.buybackPrice > 0 ? `（${formatTWDT(investment.buybackPrice)}）` : ""}`}
-          </button>
-        </form>
-        <ActionMessage state={buybackState} />
-
-        <form action={statusAction} className="flex items-center gap-2">
-          <select
-            name="status"
-            defaultValue={investment.status}
-            className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
-          >
-            {([1, 2, 3] as ProjectStatus[]).map((s) => (
-              <option key={s} value={s}>
-                {s}. {STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            disabled={statusPending}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:border-brand/50 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
-          >
-            切換
-          </button>
-        </form>
-        <ActionMessage state={statusState} />
-      </div>
     </div>
   );
 }
