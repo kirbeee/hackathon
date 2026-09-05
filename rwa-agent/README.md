@@ -16,9 +16,12 @@ than filling in a fixed form. When it has enough to act, the agent:
    first, and only uses the numeric score to compare campaigns within the
    same tier.
 3. Checks its own Solana devnet wallet balance (`get_wallet_balance`).
-4. Decides what to buy, then actually pays for it: sends a real devnet SOL
-   payment from its own keypair to the campaign treasury and records the
-   purchase via `backend` (`buy_rwa`).
+4. Decides what to buy, presents the plan (campaign, risk tier/score,
+   amount), and waits for the user to confirm before spending anything —
+   unless the user already preauthorized automatic buying earlier in the
+   conversation (e.g. "不用再問我，直接幫我下單"). Once confirmed, it pays
+   for real: sends a real devnet SOL payment from its own keypair to the
+   campaign treasury and records the purchase via `backend` (`buy_rwa`).
 
 The LLM (OpenAI, via standard Chat Completions tool-calling, `stream=True`)
 only plans and narrates; every number that matters (risk score, balance,
