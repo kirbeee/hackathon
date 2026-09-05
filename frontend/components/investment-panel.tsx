@@ -5,14 +5,13 @@ import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
 import {
   claimInvestmentRewardAction,
-  completePaidSharePurchaseAction,
+  submitDemoSharePurchaseAction,
   validatePaymentReportingAction,
   type InvestmentActionState,
 } from "@/lib/actions";
 import type { AppClient } from "@/app/providers";
 import { STATUS_LABELS } from "@/lib/campaigns";
 import { formatTWDT } from "@/lib/format";
-import { sendTokenPayment } from "@/lib/token-payment";
 import { MAX_PAYMENT_TWD, RWA_PRICE_TWD, TWD_PER_USDC, rwaAmountForPayment } from "@/lib/rwa-payment";
 import type {
   InvestmentTerms,
@@ -64,7 +63,6 @@ export function InvestmentPanel({
   const [buyState, setBuyState] = useState<InvestmentActionState>(initialState);
   const [buyPending, setBuyPending] = useState(false);
   const [buyStage, setBuyStage] = useState<string | null>(null);
-  const [paymentSignature, setPaymentSignature] = useState<string | null>(null);
   const numericPaymentAmount = Number(paymentAmount);
   const paymentTwdEquivalent =
     currency === "USDC" ? numericPaymentAmount * TWD_PER_USDC : numericPaymentAmount;
@@ -106,7 +104,6 @@ export function InvestmentPanel({
 
     setBuyPending(true);
     setBuyState(initialState);
-    setPaymentSignature(null);
 
     try {
       const reporting = await validatePaymentReportingAction(backendEndpoint);
@@ -115,17 +112,8 @@ export function InvestmentPanel({
         return;
       }
 
-      setBuyStage("等待 Phantom 確認付款…");
-      const signature = await sendTokenPayment({
-        client,
-        signer: connected.signer,
-        currency,
-        amount: paymentAmount,
-      });
-      setPaymentSignature(signature);
-
-      setBuyStage("付款已送出，正在回報投資交易後端…");
-      const result = await completePaidSharePurchaseAction({
+      setBuyStage("正在送出認購請求…");
+      const result = await submitDemoSharePurchaseAction({
         slug,
         projectName,
         shareAmount: numericRwaTokenAmount,
@@ -139,7 +127,7 @@ export function InvestmentPanel({
     } catch (error) {
       setBuyState({
         status: "error",
-        message: error instanceof Error ? error.message : "付款失敗，請稍後再試。",
+        message: error instanceof Error ? error.message : "認購失敗，請稍後再試。",
       });
     } finally {
       setBuyStage(null);
@@ -291,16 +279,6 @@ export function InvestmentPanel({
         </div>
         {buyStage && <p role="status" className="text-sm text-foreground/60">{buyStage}</p>}
         <ActionMessage state={buyState} />
-        {paymentSignature && (
-          <a
-            href={`https://explorer.solana.com/tx/${paymentSignature}?cluster=devnet`}
-            target="_blank"
-            rel="noreferrer"
-            className="break-all text-xs font-medium text-brand hover:underline"
-          >
-            查看 devnet 付款交易：{paymentSignature}
-          </a>
-        )}
       </form>
 
     </div>

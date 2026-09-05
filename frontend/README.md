@@ -160,7 +160,7 @@ npm run build
 
 ## 專案結構
 
-Demo 種子專案統一以 **1 USDC = 1 枚 RWA Token** 認購，最低 1 枚；投資型專案亦可支付等值 30 TWD Token。投資購買只接受整枚，付款與後端記帳均使用 1 USDC = 30 TWD。其他認購方案也使用 Devnet USDC 付款。更新後請重啟後端以載入新價格、募資總額與按比例縮放的投資收益資料，並重新整理前端。
+Demo 種子專案統一以 **1 USDC = 1 枚 RWA Token** 顯示認購換算，最低 1 枚。投資型專案（含 AI 客服）保留原有付款金額、幣別與 RWA 數量欄位，但購買按鈕只透過 Server Action 向設定的 Endpoint POST `projectName`、`rwaTokenAmount`、`walletAddress`，成功後更新模擬持股；不查錢包餘額、不簽名、不扣 USDC/TWD，也不執行 swap。連接錢包僅用來取得收取 RWA 的地址。其他認購方案仍使用 Devnet USDC 付款。更新種子價格後請重啟後端，並重新整理前端。
 
 付款換算測試（Node.js 24）：`node --test tests/rwa-payment.test.mjs`。
 

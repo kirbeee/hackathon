@@ -173,7 +173,8 @@ export async function buySharesAction(
   });
 }
 
-export async function completePaidSharePurchaseAction(input: {
+/** Demo-only submission: no wallet payment or swap is requested or verified. */
+export async function submitDemoSharePurchaseAction(input: {
   slug: string;
   projectName: string;
   shareAmount: number;
@@ -231,11 +232,11 @@ export async function completePaidSharePurchaseAction(input: {
     });
 
     if (!response.ok) {
-      throw new Error(`付款已送出，但後端回報失敗（HTTP ${response.status}），請勿重複付款。`);
+      throw new Error(`認購請求失敗（HTTP ${response.status}），請確認後端服務。`);
     }
 
     await buyShares(input.slug, shareAmount);
-    return `付款完成，已成功購買 ${input.rwaTokenAmount} 枚 RWA Token。`;
+    return `認購完成，已登記 ${input.rwaTokenAmount} 枚 RWA Token。`;
   });
 }
 
