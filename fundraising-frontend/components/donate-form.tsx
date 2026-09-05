@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { donateAction, type DonateFormState } from "@/lib/actions";
 import { formatCurrency } from "@/lib/format";
 import type { RewardTier } from "@/lib/types";
+import { WalletStatusPanel } from "./wallet-status";
 
 const initialState: DonateFormState = { status: "idle" };
 
@@ -17,6 +18,8 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <WalletStatusPanel compact />
+
       <div>
         <span className="mb-2 block text-sm font-medium text-foreground/70">
           選擇 RWA Token 回饋方案

@@ -17,21 +17,6 @@ const CATEGORY_ORDER: CampaignCategory[] = [
 
 const TRUST_LOGOS = ["工商時報", "數位時代", "創業小聚", "台灣新創競技場", "資策會"];
 
-const AI_AGENT_FEATURES = [
-  {
-    title: "自動監控結算與買回時機",
-    description: "AI Agent 持續追蹤每個投資型 RWA 專案的年度結算與農夫買回進度，第一時間掌握狀態變化。",
-  },
-  {
-    title: "自動執行分紅與交割",
-    description: "分紅可領時自動幫你領取，買回啟動時自動完成交割，不用手動盯著每個專案頁面。",
-  },
-  {
-    title: "智慧再投資建議",
-    description: "根據歷史殖利率、投資人分潤與風險狀況，建議下一個值得關注的 RWA 專案。",
-  },
-];
-
 const TESTIMONIALS = [
   {
     quote: "終於有一個管道，讓我們不用跑遍創投就能啟動研發。RWA Token 讓早期用戶變成真正的合作夥伴。",
@@ -187,33 +172,6 @@ export default async function HomePage() {
           <Reveal delay={150} className="mt-8">
             <JourneyRing />
           </Reveal>
-        </div>
-      </section>
-
-      <section className="border-t border-border bg-surface-muted">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <Reveal>
-            <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-semibold">AI Agent 自動化交易</h2>
-              <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground/50">
-                展示功能・即將推出
-              </span>
-            </div>
-            <p className="mt-2 max-w-2xl text-sm text-foreground/60">
-              投資型 RWA 專案的結算與買回都有明確規則可循，AI Agent 可以代替你盯盤，
-              在對的時機自動領取分紅、完成買回交割。
-            </p>
-          </Reveal>
-          <div className="mt-8 grid gap-6 sm:grid-cols-3">
-            {AI_AGENT_FEATURES.map((feature, i) => (
-              <Reveal key={feature.title} delay={i * 100}>
-                <div className="h-full rounded-2xl border border-border bg-surface p-6 transition hover:-translate-y-1 hover:shadow-lg hover:shadow-black/5">
-                  <h3 className="font-semibold text-foreground">{feature.title}</h3>
-                  <p className="mt-2 text-sm text-foreground/60">{feature.description}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
         </div>
       </section>
 

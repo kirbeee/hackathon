@@ -39,3 +39,13 @@ export function formatDate(iso: string): string {
     day: "numeric",
   }).format(new Date(iso));
 }
+
+const LAMPORTS_PER_SOL = BigInt(1_000_000_000);
+
+export function formatSol(lamports: bigint): string {
+  const whole = lamports / LAMPORTS_PER_SOL;
+  const frac = lamports % LAMPORTS_PER_SOL;
+  const fracStr = frac.toString().padStart(9, "0").replace(/0+$/, "");
+  const formatted = fracStr ? `${whole}.${fracStr}` : whole.toString();
+  return `${formatted} SOL`;
+}

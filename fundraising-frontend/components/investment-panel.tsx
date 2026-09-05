@@ -12,6 +12,7 @@ import {
 import { STATUS_LABELS } from "@/lib/campaigns";
 import { formatTWDT } from "@/lib/format";
 import type { InvestmentTerms, InvestorPosition, ProjectStatus } from "@/lib/types";
+import { WalletStatusPanel } from "./wallet-status";
 
 const initialState: InvestmentActionState = { status: "idle" };
 
@@ -60,6 +61,8 @@ export function InvestmentPanel({
 
   return (
     <div className="flex flex-col gap-6">
+      <WalletStatusPanel compact />
+
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <InfoRow label="每份價格" value={formatTWDT(investment.sharePrice)} />
         <InfoRow label="已售出" value={`${investment.mintedShares} / ${investment.totalShares} 份`} />

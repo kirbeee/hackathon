@@ -10,6 +10,7 @@ import {
 } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
 import type { AppClient } from "@/app/providers";
+import { WalletBalanceBadge, WalletStatusPanel } from "./wallet-status";
 
 function truncate(address: string) {
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
@@ -34,7 +35,14 @@ export function WalletConnectButton() {
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition hover:border-brand/50"
       >
-        {address ? <span className="font-mono">{truncate(address)}</span> : <span>連接錢包</span>}
+        {address ? (
+          <>
+            <span className="font-mono">{truncate(address)}</span>
+            <WalletBalanceBadge />
+          </>
+        ) : (
+          <span>連接錢包</span>
+        )}
         <span className="text-xs text-foreground/40">{open ? "▲" : "▼"}</span>
       </button>
 
@@ -42,14 +50,7 @@ export function WalletConnectButton() {
         <div className="absolute right-0 z-10 mt-2 w-64 rounded-xl border border-border bg-surface p-3 shadow-lg">
           {connected ? (
             <div className="space-y-3">
-              <div className="rounded-lg bg-surface-muted px-3 py-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-foreground/50">
-                  已連接
-                </p>
-                <p className="font-mono text-sm text-foreground" title={address ?? ""}>
-                  {address ? truncate(address) : ""}
-                </p>
-              </div>
+              <WalletStatusPanel compact />
               <button
                 type="button"
                 onClick={() => {

@@ -246,3 +246,15 @@ export async function setInvestmentStatusAction(
     return "專案狀態已更新。";
   });
 }
+
+export async function agentBuySharesAction(slug: string, amount = 1): Promise<void> {
+  await buyShares(slug, amount);
+}
+
+export async function agentDonateAction(slug: string, tierId: string): Promise<void> {
+  await addDonation(slug, {
+    tierId,
+    backerName: "AI Agent",
+    message: "Devnet 自動下單",
+  });
+}
