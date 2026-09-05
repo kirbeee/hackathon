@@ -1,15 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Amount } from "./currency";
 import { ProgressBar } from "./progress-bar";
 import { CategoryPill } from "./category-pill";
-import {
-  daysRemaining,
-  formatCompactNumber,
-  formatCurrency,
-  formatTWDT,
-  fundedPercent,
-  progressPercent,
-} from "@/lib/format";
+import { daysRemaining, fundedPercent, progressPercent } from "@/lib/format";
 import type { Campaign } from "@/lib/types";
 
 export function CampaignCard({
@@ -64,7 +58,7 @@ export function CampaignCard({
           <span className="text-xs font-medium text-foreground/40">
             {isInvestment
               ? "RWA 債權投資標的"
-              : `${campaign.rewardTiers.length} 種債權認購方案`}
+              : `${campaign.rewardTiers.length} 種 RWA Token 兌換方案`}
           </span>
         </div>
         <h3
@@ -82,18 +76,15 @@ export function CampaignCard({
           {featured ? campaign.story : campaign.summary}
         </p>
         <p className="text-xs text-foreground/50">
-          {isInvestment
-            ? `每份 ${formatTWDT(campaign.investment!.sharePrice)}`
-            : `每單位 ${formatCurrency(startingPrice!)}`}
+          {isInvestment ? "每份 " : "每單位 "}
+          <Amount amountTWD={isInvestment ? campaign.investment!.sharePrice : startingPrice!} />
         </p>
 
         <div className="mt-auto flex flex-col gap-2 pt-2">
           <ProgressBar percent={percent} />
           <div className="flex items-baseline justify-between text-sm">
             <span className="font-semibold text-brand-strong">
-              {isInvestment
-                ? `${formatCompactNumber(campaign.raisedAmount)} TWDT`
-                : `${formatCompactNumber(campaign.raisedAmount)} 元`}
+              <Amount amountTWD={campaign.raisedAmount} unit={isInvestment ? "TWDT" : "元"} />
             </span>
             <span className={funded >= 100 ? "font-medium text-brand-strong" : "text-foreground/50"}>
               {funded}% 已認購

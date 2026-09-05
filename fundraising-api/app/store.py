@@ -80,6 +80,7 @@ def _seed_campaign(
     summary: str,
     story: str,
     category: str,
+    riskTier: str,
     creatorName: str,
     location: str,
     coverGradient: str,
@@ -122,6 +123,7 @@ def _seed_campaign(
             raisedAmount=raised,
             backerCount=backers,
             goalAmount=goal,
+            riskTier=riskTier,
         )
     )
 
@@ -138,6 +140,7 @@ def _seed() -> None:
             "本案主要償付來源為柑橘銷售及果園營運收入。投資人仍須留意產量、農產品價格、天然災害、轉型成效與營運管理等風險；Tokenization 不代表本金或收益受到保證。"
         ),
         category="agriculture",
+        riskTier="supporter",
         creatorName="崙背果農合作社",
         location="雲林縣",
         coverGradient="from-stone-300 via-orange-100 to-white",
@@ -176,6 +179,7 @@ def _seed() -> None:
             "本案主要償付來源為既有 SaaS 訂閱與新模組商業化收入。投資人仍須留意研發延期、技術成果、市場需求、成本超支及新創公司信用等風險。"
         ),
         category="startup",
+        riskTier="degen",
         creatorName="迴響科技 Reson Labs",
         location="台北市",
         coverGradient="from-neutral-800 via-neutral-700 to-neutral-600",
@@ -214,6 +218,7 @@ def _seed() -> None:
             "本案主要償付來源為托特包銷售收入。投資人仍須留意訂單取消、材料成本上升、生產延誤、庫存去化及銷售不如預期等風險。"
         ),
         category="lifestyle",
+        riskTier="supporter",
         creatorName="皮寓工作室",
         location="台北市",
         coverGradient="from-stone-400 via-stone-300 to-stone-200",
@@ -266,6 +271,7 @@ def _seed() -> None:
             "本案主要償付來源為中秋檔期的月餅銷售收入。投資人仍須留意銷量不如預期、原料成本、退貨、訂單取消及回款延遲等風險；Tokenization 不代表本金或收益受到保證。"
         ),
         category="food",
+        riskTier="supporter",
         creatorName="順興餅舖",
         location="台中市",
         coverGradient="from-amber-100 via-orange-50 to-white",
@@ -318,6 +324,7 @@ def _seed() -> None:
             "本案主要償付來源為咖啡機銷售及訂單收入。投資人仍須留意量產延誤、零組件短缺、成本上升、產品需求變化及售後服務等風險。"
         ),
         category="tech",
+        riskTier="supporter",
         creatorName="沐豆家電",
         location="新竹市",
         coverGradient="from-neutral-300 via-neutral-200 to-neutral-100",
@@ -370,6 +377,7 @@ def _seed() -> None:
             "本案主要償付來源為鏡框、鏡片組合及通路銷售收入。投資人仍須留意訂單取消、生產延誤、材料成本、庫存及市場需求等風險。"
         ),
         category="design",
+        riskTier="supporter",
         creatorName="見物眼鏡工作室",
         location="台南市",
         coverGradient="from-emerald-700 via-emerald-600 to-teal-500",
@@ -409,6 +417,46 @@ def _seed() -> None:
                 estimatedDelivery="2027 年 4 月",
             ),
         ],
+    )
+
+    _seed_campaign(
+        id="c7",
+        slug="cathay-xinyi-office-rental-income-rwa",
+        title="國泰信義區商辦收租 RWA：小額參與精華地段穩定配息",
+        summary="本案由國泰地產／資管審核把關，將信義區商辦的租金收益權拆分為小額 RWA Token；償付來源為商辦長期租約收入，屬定期配息型基礎設施資產。",
+        story=(
+            "本案標的為國泰地產旗下位於台北市信義區的商辦大樓，已有多家長期承租戶，租約穩定、空置率低。"
+            "平台將該棟商辦的租金收益權拆分為 1,000 份 RWA Token，每份代表一部分經濟權益，讓小資族也能以小額資金參與信義區精華地段的不動產收益，而不必整棟購置。"
+            "本案由國泰地產與資產管理團隊審核把關，並負責招租與物業管理；每年依實際收租結果辦理配息結算。"
+            "投資人仍須留意商辦出租率、續約條件、利率環境與不動產市場景氣等風險；Tokenization 不代表本金或收益受到保證，但相較新創與消費性商品債權，此類基礎設施資產現金流更為穩定、波動較低。"
+        ),
+        category="real-estate",
+        riskTier="diversifier",
+        creatorName="國泰地產｜資產管理",
+        location="台北市信義區",
+        coverGradient="from-emerald-100 via-green-50 to-white",
+        coverImage="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
+        createdAt=_past(6),
+        deadline=_days(45),
+        investment=InvestmentTerms(
+            farmerName="國泰地產｜資產管理",
+            totalShares=1_000,
+            mintedShares=940,
+            sharePrice=5_000,
+            buildCost=5_000_000,
+            annualIncome=250_000,
+            investorSharePercent=90,
+            interestRate=5,
+            premiumRate=2,
+            status=1,
+            currentYear=1,
+            cumulativePrincipal=225_000,
+            remainingPrincipal=4_775_000,
+            buybackActive=False,
+            buybackPrice=0,
+            holderCount=356,
+            tokenSymbol="RWA-CATHAY-XINYI",
+        ),
     )
 
     donations.append(
@@ -720,6 +768,10 @@ def create_campaign(
         summary=summary,
         story=story,
         category=category,
+        # New campaigns come in through the reward-tier creation form, which
+        # only ever produces physical-goods/product-perk offerings — always
+        # "supporter" tier (see RiskTier in app.models).
+        riskTier="supporter",
         creatorName=creatorName,
         location=location,
         coverGradient=_GRADIENTS[len(campaigns) % len(_GRADIENTS)],

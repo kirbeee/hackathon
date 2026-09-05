@@ -79,6 +79,7 @@ async def get_rwa_assets() -> str:
             "slug": c["slug"],
             "title": c["title"],
             "category": c["category"],
+            "riskTier": c.get("riskTier"),
             "fundingModel": c["fundingModel"],
             "goalAmount": c["goalAmount"],
             "raisedAmount": c["raisedAmount"],
@@ -91,7 +92,19 @@ async def get_rwa_assets() -> str:
 async def get_risk_score(slug: str) -> str:
     campaign = await fundraising_client.get_campaign(slug)
     score, level = risk.score_campaign(campaign)
-    return json.dumps({"slug": slug, "score": round(score, 1), "level": level}, ensure_ascii=False)
+    tier = campaign.get("riskTier")
+    info = risk.tier_info(tier) if tier else None
+    return json.dumps(
+        {
+            "slug": slug,
+            "score": round(score, 1),
+            "level": level,
+            "riskTier": tier,
+            "tierLabel": info["label"] if info else None,
+            "tierDescription": info["description"] if info else None,
+        },
+        ensure_ascii=False,
+    )
 
 
 async def get_wallet_balance() -> str:

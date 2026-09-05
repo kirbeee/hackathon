@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { CurrencySwitcher } from "./currency";
 import { WalletConnectButton } from "./wallet-connect-button";
 
 export function SiteHeader() {
@@ -19,21 +20,19 @@ export function SiteHeader() {
           <Link href="/campaigns" className="transition hover:text-foreground">
             投資標的
           </Link>
-          <Link
-            href="/campaigns/new"
-            className="transition hover:text-foreground"
-          >
-            債權發行
+          <Link href="/agent" className="transition hover:text-foreground">
+            AI Agent
           </Link>
         </nav>
 
         <div className="flex items-center justify-end gap-2 sm:gap-3">
+          <CurrencySwitcher />
           <WalletConnectButton />
           <Link
-            href="/campaigns/new"
+            href="/agent"
             className="whitespace-nowrap rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-accent-strong active:scale-95 sm:px-5 sm:py-2 sm:text-sm"
           >
-            申請發行
+            AI Agent
           </Link>
         </div>
       </div>

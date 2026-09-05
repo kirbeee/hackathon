@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Amount } from "@/components/currency";
 import { CategoryPill } from "@/components/category-pill";
 import { ProgressBar } from "@/components/progress-bar";
 import { DonateForm } from "@/components/donate-form";
@@ -13,9 +14,7 @@ import {
 } from "@/lib/campaigns";
 import {
   daysRemaining,
-  formatCurrency,
   formatDate,
-  formatTWDT,
   fundedPercent,
   progressPercent,
 } from "@/lib/format";
@@ -91,7 +90,7 @@ export default async function CampaignDetailPage({
 
           {!isInvestment && (
             <div className="mt-10 border-t border-border pt-8">
-              <h2 className="mb-4 font-display text-lg font-semibold">RWA 債權認購方案</h2>
+              <h2 className="mb-4 font-display text-lg font-semibold">RWA Token 兌換方案</h2>
               <div className="flex flex-col gap-3">
                 {campaign.rewardTiers.map((t) => {
                   const remaining = t.totalSupply - t.claimed;
@@ -106,7 +105,7 @@ export default async function CampaignDetailPage({
                           <h3 className="font-display font-semibold text-foreground">{t.title}</h3>
                         </div>
                         <span className="whitespace-nowrap text-lg font-bold text-brand-strong">
-                          {formatCurrency(t.price)}
+                          <Amount amountTWD={t.price} />
                         </span>
                       </div>
                       <p className="mt-2 text-sm text-foreground/70">{t.description}</p>
@@ -176,12 +175,12 @@ export default async function CampaignDetailPage({
           )}
 
           <div className="mt-10 border-t border-border pt-8">
-            <h2 className="mb-4 font-display text-lg font-semibold">投資人紀錄（{donations.length}）</h2>
+            <h2 className="mb-4 font-display text-lg font-semibold">支持者紀錄（{donations.length}）</h2>
             {donations.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border p-6 text-center">
-                <p className="text-sm font-medium text-foreground">目前尚無投資人認購紀錄</p>
+                <p className="text-sm font-medium text-foreground">目前尚無支持者兌換紀錄</p>
                 <p className="mt-1 text-sm text-foreground/50">
-                  完成第一筆認購後，交易與投資備註會顯示在這裡。
+                  完成第一筆兌換後，交易與留言會顯示在這裡。
                 </p>
               </div>
             ) : (
@@ -193,7 +192,8 @@ export default async function CampaignDetailPage({
                       <div className="flex items-center justify-between text-sm">
                         <span className="font-semibold">{donation.backerName}</span>
                         <span className="text-foreground/50">
-                          認購 {donationTier?.title ?? "債權單位"}・{formatCurrency(donation.amount)}
+                          兌換 {donationTier?.title ?? "回饋方案"}・
+                          <Amount amountTWD={donation.amount} />
                         </span>
                       </div>
                       {donation.message && (
@@ -210,11 +210,12 @@ export default async function CampaignDetailPage({
         <aside className="h-fit rounded-lg border border-border bg-surface p-6">
           <div className="flex flex-col gap-2">
             <span className="text-2xl font-bold text-brand-strong">
-              {isInvestment ? formatTWDT(campaign.raisedAmount) : formatCurrency(campaign.raisedAmount)}
+              <Amount amountTWD={campaign.raisedAmount} unit={isInvestment ? "TWDT" : "元"} />
             </span>
             <span className="text-sm text-foreground/60">
               目標{" "}
-              {isInvestment ? formatTWDT(campaign.goalAmount) : formatCurrency(campaign.goalAmount)}{" "}
+              <Amount amountTWD={campaign.goalAmount} unit={isInvestment ? "TWDT" : "元"} />
+              {" "}
               ・{" "}
               <span className={funded >= 100 ? "font-medium text-brand-strong" : undefined}>
                 {funded}% 已認購

@@ -32,6 +32,13 @@ app = FastAPI(title="Fundraising API", version="0.1.0")
 # Local hackathon demo: allow any origin so the wallet frontend (unknown
 # port/host) can call this too. Tighten via CORS_ALLOW_ORIGINS before any
 # real deployment.
+#
+# allow_private_network is required because the browser loads
+# fundraising-frontend over the public HTTPS tunnel, then calls this service
+# on a private/loopback address (127.0.0.1:8000) for the client-side payment
+# flow -- Chrome's Private Network Access preflight blocks that by default
+# ("Disallowed CORS private-network"), which surfaces to users as a plain
+# "Failed to fetch" with no other clue.
 _allow_origins = os.environ.get("CORS_ALLOW_ORIGINS", "*")
 app.add_middleware(
     CORSMiddleware,
@@ -39,6 +46,7 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_private_network=True,
 )
 
 

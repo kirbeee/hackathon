@@ -1,13 +1,37 @@
-export function formatCurrency(amount: number): string {
+// Demo-only fixed rate -- not a live FX feed. Override via
+// NEXT_PUBLIC_TWD_PER_USD if a different reference rate is wanted.
+const TWD_PER_USD = Number(process.env.NEXT_PUBLIC_TWD_PER_USD) || 32;
+
+// currencyDisplay: "code" prints the ISO unit ("TWD"/"USD") instead of a
+// bare symbol ("NT$"/"$") -- the symbols alone don't make the unit obvious
+// once both currencies are shown side by side.
+export function formatTWD(amount: number): string {
   return new Intl.NumberFormat("zh-TW", {
     style: "currency",
     currency: "TWD",
+    currencyDisplay: "code",
     maximumFractionDigits: 0,
   }).format(amount);
 }
 
+export function formatUSD(amountTWD: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    currencyDisplay: "code",
+    maximumFractionDigits: 0,
+  }).format(amountTWD / TWD_PER_USD);
+}
+
+/** @deprecated Use formatTWD, kept only for the currency symbol style. */
+export function formatCurrency(amount: number): string {
+  const twd = formatTWD(amount);
+  return `${twd}（≈ ${formatUSD(amount)}）`;
+}
+
 export function formatTWDT(amount: number): string {
-  return `${new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 0 }).format(amount)} TWDT`;
+  const twdt = `${new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 0 }).format(amount)} TWDT`;
+  return `${twdt}（≈ ${formatUSD(amount)}）`;
 }
 
 export function formatCompactNumber(amount: number): string {
@@ -15,6 +39,11 @@ export function formatCompactNumber(amount: number): string {
     notation: "compact",
     maximumFractionDigits: 1,
   }).format(amount);
+}
+
+/** Compact TWD amount with its unit and USD equivalent, e.g. "12.3萬 元（≈ USD 3,844）". */
+export function formatCompactCurrency(amount: number, unit: "元" | "TWDT" = "元"): string {
+  return `${formatCompactNumber(amount)} ${unit}（≈ ${formatUSD(amount)}）`;
 }
 
 export function progressPercent(raised: number, goal: number): number {

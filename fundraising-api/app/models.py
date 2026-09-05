@@ -10,9 +10,18 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel
 
-CampaignCategory = Literal["agriculture", "startup", "lifestyle", "tech", "food", "design"]
+CampaignCategory = Literal[
+    "agriculture", "startup", "lifestyle", "tech", "food", "design", "real-estate"
+]
 FundingModel = Literal["reward", "investment"]
 ProjectStatus = Literal[1, 2, 3]
+
+# The three-tier risk framework the RWA agent narrates against — orthogonal to
+# `category` (industry theme): this is the business-model risk class.
+#   degen        - 高風險/高潛力: 新創早期募資、新業務研發
+#   supporter    - 中風險/穩定兌現: 實體商品與小農契作
+#   diversifier  - 低風險/穩定收益: 國泰商辦收租、基礎設施
+RiskTier = Literal["degen", "supporter", "diversifier"]
 
 
 class RewardTier(BaseModel):
@@ -82,6 +91,7 @@ class Campaign(BaseModel):
     summary: str
     story: str
     category: CampaignCategory
+    riskTier: RiskTier
     creatorName: str
     location: str
     coverGradient: str

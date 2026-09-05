@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiPost } from "@/lib/api-client";
-import { formatCurrency } from "@/lib/format";
+import { Amount } from "./currency";
 import { LAMPORTS_PER_SHARE_UNIT } from "@/lib/solana";
 import { useTreasuryPayment } from "@/lib/use-treasury-payment";
 import type { RewardTier } from "@/lib/types";
@@ -39,13 +39,13 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
       });
       setState({
         status: "success",
-        message: `認購完成，RWA Token 已記錄至你的投資部位（交易 ${signature.slice(0, 8)}…）`,
+        message: `兌換完成，RWA Token 已存入你的紀錄（交易 ${signature.slice(0, 8)}…）`,
       });
       router.refresh();
     } catch (error) {
       setState({
         status: "error",
-        message: error instanceof Error ? error.message : "認購失敗，請稍後再試。",
+        message: error instanceof Error ? error.message : "兌換失敗，請稍後再試。",
       });
     } finally {
       setPending(false);
@@ -56,7 +56,7 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
         <span className="mb-2 block text-sm font-medium text-foreground/70">
-          選擇債權認購方案
+          選擇 RWA Token 兌換方案
         </span>
         <div className="flex flex-col gap-2">
           {rewardTiers.map((t) => {
@@ -87,13 +87,13 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-semibold text-foreground">{t.title}</span>
                       <span className="whitespace-nowrap font-semibold text-brand-strong">
-                        {formatCurrency(t.price)}
+                        <Amount amountTWD={t.price} />
                       </span>
                     </div>
                     <p className="mt-0.5 text-xs text-foreground/60">{t.description}</p>
                     <div className="mt-1 flex items-center justify-between text-xs text-foreground/40">
                       <span className="font-mono">{t.tokenSymbol}</span>
-                      <span>{soldOut ? "已認購完畢" : `剩餘 ${remaining} 個單位`}</span>
+                      <span>{soldOut ? "已兌換完畢" : `剩餘 ${remaining} 個單位`}</span>
                     </div>
                   </div>
                 </div>
@@ -105,33 +105,33 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
 
       <div>
         <label className="mb-1 block text-sm font-medium text-foreground/70" htmlFor="backerName">
-          投資人名稱（選填）
+          你的稱呼（選填）
         </label>
         <input
           id="backerName"
           value={backerName}
           onChange={(e) => setBackerName(e.target.value)}
-          placeholder="匿名投資人"
+          placeholder="匿名支持者"
           className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
       </div>
 
       <div>
         <label className="mb-1 block text-sm font-medium text-foreground/70" htmlFor="message">
-          投資備註（選填）
+          給發起人的話（選填）
         </label>
         <textarea
           id="message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={2}
-          placeholder="記錄本次認購目的或風險考量"
+          placeholder="加油！"
           className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
       </div>
 
       <p className="text-xs text-foreground/50">
-        認購時會透過你連接的 Solana 錢包發送一筆 Devnet 測試轉帳（0.001 SOL）作為交易證明，
+        送出時會透過你連接的 Solana 錢包發送一筆 Devnet 測試轉帳（0.001 SOL）作為交易證明，
         {connected ? "錢包已連接。" : "尚未連接錢包，送出時會請你先連接。"}
       </p>
 
@@ -140,7 +140,7 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
         disabled={pending || !selectedTierId}
         className="rounded-full bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-accent-strong active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
       >
-        {pending ? "認購處理中…" : "認購此債權單位"}
+        {pending ? "處理中…" : "兌換這個方案"}
       </button>
 
       {state.status !== "idle" && (

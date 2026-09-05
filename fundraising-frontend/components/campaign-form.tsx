@@ -80,7 +80,7 @@ export function CampaignForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
-      <Field label="發行專案名稱" htmlFor="title">
+      <Field label="專案名稱" htmlFor="title">
         <input
           id="title"
           name="title"
@@ -91,31 +91,31 @@ export function CampaignForm() {
         />
       </Field>
 
-      <Field label="債權摘要" htmlFor="summary">
+      <Field label="專案簡介" htmlFor="summary">
         <input
           id="summary"
           name="summary"
           required
           minLength={10}
-          placeholder="簡述資金用途、債權期間與主要償付來源"
+          placeholder="簡述資金用途，以及贊助者能換到什麼"
           className={inputClass}
         />
       </Field>
 
-      <Field label="發行說明與風險" htmlFor="story">
+      <Field label="詳細說明" htmlFor="story">
         <textarea
           id="story"
           name="story"
           required
           minLength={30}
           rows={6}
-          placeholder="說明資金用途、償付來源、發行條件、底層資產與主要投資風險"
+          placeholder="說明資金用途、商品或服務內容、預計交付方式與注意事項"
           className={inputClass}
         />
       </Field>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="標的產業" htmlFor="category">
+        <Field label="專案分類" htmlFor="category">
           <select id="category" name="category" required defaultValue="" className={inputClass}>
             <option value="" disabled>
               請選擇分類
@@ -134,11 +134,11 @@ export function CampaignForm() {
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="發行人 / 營運團隊" htmlFor="creatorName">
+        <Field label="發起人 / 團隊名稱" htmlFor="creatorName">
           <input id="creatorName" name="creatorName" required className={inputClass} />
         </Field>
 
-        <Field label="認購期間（天）" htmlFor="durationDays">
+        <Field label="募資期間（天）" htmlFor="durationDays">
           <input
             id="durationDays"
             name="durationDays"
@@ -154,24 +154,24 @@ export function CampaignForm() {
 
       <div className="border-t border-border pt-5">
         <div className="mb-1 flex items-center justify-between">
-          <span className="text-sm font-medium text-foreground/70">RWA 債權認購級距</span>
+          <span className="text-sm font-medium text-foreground/70">RWA Token 回饋方案</span>
           <button
             type="button"
             onClick={addTier}
             className="text-sm font-medium text-brand-strong hover:underline"
           >
-            + 新增級距
+            + 新增方案
           </button>
         </div>
         <p className="mb-3 text-xs text-foreground/50">
-          每個級距對應一種 RWA Token 認購單位，投資人可依資金配置選擇參與金額。
+          每個方案對應一種 RWA Token 回饋品項，贊助者可依需求選擇兌換方案。
         </p>
 
         <div className="flex flex-col gap-4">
           {tiers.map((t, index) => (
             <div key={t.key} className="rounded-lg border border-border p-4">
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm font-semibold">認購級距 {index + 1}</span>
+                <span className="text-sm font-semibold">回饋方案 {index + 1}</span>
                 {tiers.length > 1 && (
                   <button
                     type="button"
@@ -185,17 +185,17 @@ export function CampaignForm() {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs text-foreground/60">級距名稱</label>
+                  <label className="mb-1 block text-xs text-foreground/60">方案名稱</label>
                   <input
                     required
                     value={t.title}
                     onChange={(e) => updateTier(t.key, { title: e.target.value })}
-                    placeholder="例如：友善農業債權｜小額認購"
+                    placeholder="例如：手工眼鏡框｜早鳥兌換"
                     className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-foreground/60">每單位認購金額（元）</label>
+                  <label className="mb-1 block text-xs text-foreground/60">每份兌換金額（元）</label>
                   <input
                     required
                     type="number"
@@ -219,13 +219,13 @@ export function CampaignForm() {
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs text-foreground/60">債權條件說明</label>
+                  <label className="mb-1 block text-xs text-foreground/60">方案內容說明</label>
                   <textarea
                     required
                     rows={2}
                     value={t.description}
                     onChange={(e) => updateTier(t.key, { description: e.target.value })}
-                    placeholder="說明資金用途、收益計算、償付來源與主要風險"
+                    placeholder="說明商品或服務內容、預計交付時間與提供方式"
                     className={inputClass}
                   />
                 </div>
@@ -242,7 +242,7 @@ export function CampaignForm() {
         disabled={pending}
         className="rounded-full bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-accent-strong active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
       >
-        {pending ? "送出中…" : "送出發行申請"}
+        {pending ? "送出中…" : "送出發起申請"}
       </button>
 
       {state.status === "error" && (

@@ -48,10 +48,16 @@ def test_list_campaigns_has_seed_data():
     res = client.get("/campaigns")
     assert res.status_code == 200
     campaigns = res.json()
-    assert len(campaigns) == 6
+    assert len(campaigns) == 7
     slugs = {c["slug"] for c in campaigns}
     assert "friendly-citrus-orchard-transition" in slugs
     assert "ai-support-copilot-rd-fund" in slugs
+    assert "cathay-xinyi-office-rental-income-rwa" in slugs
+
+    by_slug = {c["slug"]: c for c in campaigns}
+    assert by_slug["ai-support-copilot-rd-fund"]["riskTier"] == "degen"
+    assert by_slug["friendly-citrus-orchard-transition"]["riskTier"] == "supporter"
+    assert by_slug["cathay-xinyi-office-rental-income-rwa"]["riskTier"] == "diversifier"
 
 
 def test_get_campaign_404_for_unknown_slug():
@@ -183,7 +189,7 @@ def test_create_campaign_gets_unique_id_and_slug():
 
     all_ids = [c["id"] for c in client.get("/campaigns").json()]
     assert len(all_ids) == len(set(all_ids)), "campaign ids must be unique"
-    assert created["id"] not in {"c1", "c2", "c3", "c4", "c5", "c6"}
+    assert created["id"] not in {"c1", "c2", "c3", "c4", "c5", "c6", "c7"}
 
 
 def test_create_campaign_rejects_short_story():
