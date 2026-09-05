@@ -169,7 +169,7 @@ export function CampaignForm() {
 
         <div className="flex flex-col gap-4">
           {tiers.map((t, index) => (
-            <div key={t.key} className="rounded-xl border border-border p-4">
+            <div key={t.key} className="rounded-lg border border-border p-4">
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-sm font-semibold">方案 {index + 1}</span>
                 {tiers.length > 1 && (
@@ -240,13 +240,17 @@ export function CampaignForm() {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-full bg-brand px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
+        className="rounded-full bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-accent-strong active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
       >
         {pending ? "送出中…" : "送出並發起專案"}
       </button>
 
       {state.status === "error" && (
-        <p role="status" className="text-sm text-danger">
+        <p
+          key={state.message}
+          role="status"
+          className="text-sm text-danger opacity-0 [animation:fade-in_0.3s_ease-out_forwards]"
+        >
           {state.message}
         </p>
       )}

@@ -1,20 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { formatCompactNumber } from "@/lib/format";
 
 const DURATION_MS = 1200;
 
 export function AnimatedCounter({ value, suffix = "" }: { value: number; suffix?: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
   // Must match the server's render (0) exactly, or React flags a hydration
   // mismatch on first paint — the count-up only starts after mount.
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-
+    // A scroll-triggered (IntersectionObserver) start isn't reliable across
+    // every browser/environment, and these numbers shouldn't stay stuck at 0
+    // because of it. Count up shortly after mount instead.
     let frame: number;
     const start = () => {
       const startTime = performance.now();
@@ -27,31 +26,15 @@ export function AnimatedCounter({ value, suffix = "" }: { value: number; suffix?
       frame = requestAnimationFrame(tick);
     };
 
-    if (typeof IntersectionObserver === "undefined") {
-      start();
-      return () => {
-        if (frame) cancelAnimationFrame(frame);
-      };
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          start();
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.5 }
-    );
-    observer.observe(node);
+    const kickoff = requestAnimationFrame(start);
     return () => {
-      observer.disconnect();
+      cancelAnimationFrame(kickoff);
       if (frame) cancelAnimationFrame(frame);
     };
   }, [value]);
 
   return (
-    <span ref={ref}>
+    <span>
       {formatCompactNumber(display)}
       {suffix}
     </span>

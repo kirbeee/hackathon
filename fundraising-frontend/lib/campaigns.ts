@@ -4,6 +4,7 @@ import type {
   CampaignCategory,
   Donation,
   InvestorPosition,
+  OnChainTransaction,
   ProjectStatus,
 } from "./types";
 
@@ -52,15 +53,11 @@ export async function getInvestorPosition(slug: string): Promise<InvestorPositio
   return position ?? { campaignId: slug, shareCount: 0, tokenIds: [], pendingRewards: 0 };
 }
 
-export async function addDonation(
-  slug: string,
-  input: { tierId: string; backerName: string; message?: string }
-): Promise<void> {
-  await apiPost(`/campaigns/${encodeURIComponent(slug)}/donate`, input);
-}
-
-export async function buyShares(slug: string, amount: number): Promise<void> {
-  await apiPost(`/campaigns/${encodeURIComponent(slug)}/buy-shares`, { amount });
+export async function getOnChainTransactions(slug: string): Promise<OnChainTransaction[]> {
+  return (
+    (await apiGet<OnChainTransaction[]>(`/campaigns/${encodeURIComponent(slug)}/transactions`)) ??
+    []
+  );
 }
 
 export async function runAnnualSettlement(slug: string): Promise<void> {

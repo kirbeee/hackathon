@@ -1,4 +1,10 @@
-const API_BASE = process.env.FUNDRAISING_API_URL ?? "http://127.0.0.1:8000";
+// Server Components/Actions read FUNDRAISING_API_URL (Node-only env var).
+// Client Components need the NEXT_PUBLIC_ variant, inlined at build time —
+// process.env.FUNDRAISING_API_URL is simply undefined in the browser bundle.
+const API_BASE =
+  typeof window === "undefined"
+    ? (process.env.FUNDRAISING_API_URL ?? "http://127.0.0.1:8000")
+    : (process.env.NEXT_PUBLIC_FUNDRAISING_API_URL ?? "http://127.0.0.1:8000");
 
 export class ApiError extends Error {}
 

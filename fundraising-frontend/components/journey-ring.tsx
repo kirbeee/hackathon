@@ -9,7 +9,7 @@ const STEPS: JourneyStep[] = [
     tag: "動機",
     title: "缺乏管道的好提案",
     description:
-      "小農地轉型、新創研發、獨立品牌新品——傳統資金市場只挑得起大型機構認可的計畫。",
+      "小農地轉型、新創研發、獨立品牌新品，傳統資金市場往往只挑得起大型機構認可的計畫。",
   },
   {
     tag: "提案",
@@ -78,20 +78,9 @@ export function JourneyRing() {
             strokeWidth={0.6}
             strokeDasharray="2 3"
           />
-          <circle
-            cx={CENTER}
-            cy={CENTER}
-            r={NODE_RADIUS}
-            fill="none"
-            stroke="var(--brand)"
-            strokeWidth={0.6}
-            strokeOpacity={0.5}
-            strokeDasharray="1 9"
-            style={{ animation: "ring-flow 6s linear infinite" }}
-          />
         </svg>
 
-        <div className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border border-border bg-surface text-center shadow-sm">
+        <div className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border border-border bg-surface text-center">
           <span className="text-xs font-bold text-brand">RWA</span>
           <span className="text-[10px] text-foreground/50">募資循環</span>
         </div>
@@ -126,7 +115,7 @@ export function JourneyRing() {
               className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
               style={{ left: `${left}%`, top: `${top}%` }}
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand text-sm font-bold text-white shadow-sm">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
                 {i + 1}
               </span>
               <span className="whitespace-nowrap rounded-full bg-surface px-2 py-0.5 text-xs font-semibold text-foreground">
@@ -139,7 +128,7 @@ export function JourneyRing() {
 
       <ol className="grid w-full gap-4 sm:grid-cols-5">
         {STEPS.map((step, i) => (
-          <li key={step.tag} className="flex flex-col gap-1 rounded-xl border border-border p-4">
+          <li key={step.tag} className="flex flex-col gap-1 rounded-lg border border-border p-4">
             <span className="text-xs font-semibold text-brand">
               {i + 1}. {step.tag}
             </span>

@@ -55,6 +55,16 @@ export interface InvestorPosition {
   pendingRewards: number;
 }
 
+/** A real Devnet SOL payment recorded against an investment-model campaign. */
+export interface OnChainTransaction {
+  id: string;
+  campaignId: string;
+  amountLamports: number;
+  shares: number;
+  txSignature: string;
+  createdAt: string;
+}
+
 export interface Donation {
   id: string;
   campaignId: string;

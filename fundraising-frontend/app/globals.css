@@ -1,15 +1,30 @@
 @import "tailwindcss";
 
+/* Scales every rem-based Tailwind utility (type, spacing) up proportionally
+   from the 16px default — body copy lands around 18-20px, headings well
+   past 24px, and the size hierarchy between them stays intact. */
+html {
+  font-size: 20px;
+}
+
 :root {
   --background: #ffffff;
-  --foreground: #13201a;
+  --foreground: #14201b;
   --surface: #ffffff;
-  --surface-muted: #f4f6f4;
-  --border: #e2e6e2;
-  --brand: #00844a;
-  --brand-strong: #005c37;
-  --brand-soft: #e3f3ea;
-  --danger: #b5540a;
+  --surface-muted: #f4f6f5;
+  --border: #e2e6e4;
+
+  /* 國泰綠 — 品牌識別、導覽、進度、次要元素 */
+  --brand: #00a859;
+  --brand-strong: #00783f;
+  --brand-soft: #e1f5ea;
+
+  /* 朝陽橘 — 專用於立即行動的關鍵 CTA */
+  --accent: #f39200;
+  --accent-strong: #d97e00;
+  --accent-soft: #fdecd6;
+
+  --danger: #c0392b;
 }
 
 @theme inline {
@@ -21,14 +36,30 @@
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
   --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
   --color-danger: var(--danger);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-serif-tc);
+  --font-display: var(--font-serif-tc);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Keyboard-only focus ring — only inputs had one before this; every
+   interactive element needs a visible, on-brand state for a11y. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 @keyframes fade-in-up {
@@ -42,9 +73,25 @@ body {
   }
 }
 
-@keyframes ring-flow {
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
   to {
-    stroke-dashoffset: -20;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 

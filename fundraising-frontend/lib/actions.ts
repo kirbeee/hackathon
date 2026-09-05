@@ -3,8 +3,6 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
-  addDonation,
-  buyShares,
   claimInvestmentReward,
   createCampaign,
   farmerBuyBackAll,
@@ -13,11 +11,6 @@ import {
 } from "./campaigns";
 import { ApiError } from "./api-client";
 import type { CampaignCategory, ProjectStatus } from "./types";
-
-export interface DonateFormState {
-  status: "idle" | "success" | "error";
-  message?: string;
-}
 
 export interface CampaignFormState {
   status: "idle" | "error";
@@ -40,29 +33,6 @@ const CATEGORIES: CampaignCategory[] = [
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof ApiError || error instanceof Error ? error.message : fallback;
-}
-
-export async function donateAction(
-  slug: string,
-  _prevState: DonateFormState,
-  formData: FormData
-): Promise<DonateFormState> {
-  const tierId = String(formData.get("tierId") ?? "");
-  if (!tierId) {
-    return { status: "error", message: "請選擇一個 RWA Token 方案。" };
-  }
-
-  const backerName = String(formData.get("backerName") ?? "");
-  const message = String(formData.get("message") ?? "");
-
-  try {
-    await addDonation(slug, { tierId, backerName, message });
-  } catch (error) {
-    return { status: "error", message: errorMessage(error, "贊助失敗，請稍後再試。") };
-  }
-
-  revalidatePath(`/campaigns/${slug}`);
-  return { status: "success", message: "感謝你的支持！這個 RWA Token 已經是你的了。" };
 }
 
 interface ParsedTier {
@@ -185,22 +155,6 @@ async function runInvestmentAction(
   }
 }
 
-export async function buySharesAction(
-  slug: string,
-  _prevState: InvestmentActionState,
-  formData: FormData
-): Promise<InvestmentActionState> {
-  const amount = Number(formData.get("amount"));
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return { status: "error", message: "請輸入大於 0 的購買股數。" };
-  }
-
-  return runInvestmentAction(slug, async () => {
-    await buyShares(slug, Math.floor(amount));
-    return `已成功購買 ${Math.floor(amount)} 份 RWA Token。`;
-  });
-}
-
 export async function claimInvestmentRewardAction(
   slug: string,
   _prevState: InvestmentActionState
@@ -244,17 +198,5 @@ export async function setInvestmentStatusAction(
   return runInvestmentAction(slug, async () => {
     await setInvestmentStatus(slug, status);
     return "專案狀態已更新。";
-  });
-}
-
-export async function agentBuySharesAction(slug: string, amount = 1): Promise<void> {
-  await buyShares(slug, amount);
-}
-
-export async function agentDonateAction(slug: string, tierId: string): Promise<void> {
-  await addDonation(slug, {
-    tierId,
-    backerName: "AI Agent",
-    message: "Devnet 自動下單",
   });
 }

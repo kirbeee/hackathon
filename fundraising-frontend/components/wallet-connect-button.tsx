@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useConnect,
   useConnectedWallet,
@@ -10,7 +10,6 @@ import {
 } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
 import type { AppClient } from "@/app/providers";
-import { WalletBalanceBadge, WalletStatusPanel } from "./wallet-status";
 
 function truncate(address: string) {
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
@@ -25,7 +24,17 @@ export function WalletConnectButton() {
   const disconnect = useDisconnect(client);
   const [open, setOpen] = useState(false);
 
-  const address = connected ? String(connected.account.address) : null;
+  // The wallet-standard adapter can resolve an already-connected wallet from
+  // storage before hydration finishes, which would render an address the
+  // server never saw. Stay in the server's "disconnected" shape for the
+  // first client render, then switch once mounted.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const address = mounted && connected ? String(connected.account.address) : null;
   const error = connect.error ?? disconnect.error;
 
   return (
@@ -33,24 +42,24 @@ export function WalletConnectButton() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition hover:border-brand/50"
+        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-brand/50 sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
       >
-        {address ? (
-          <>
-            <span className="font-mono">{truncate(address)}</span>
-            <WalletBalanceBadge />
-          </>
-        ) : (
-          <span>連接錢包</span>
-        )}
+        {address ? <span className="font-mono">{truncate(address)}</span> : <span>連接錢包</span>}
         <span className="text-xs text-foreground/40">{open ? "▲" : "▼"}</span>
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-10 mt-2 w-64 rounded-xl border border-border bg-surface p-3 shadow-lg">
+        <div className="absolute right-0 z-10 mt-2 w-64 rounded-lg border border-border bg-surface p-3 shadow-md">
           {connected ? (
             <div className="space-y-3">
-              <WalletStatusPanel compact />
+              <div className="rounded-lg bg-surface-muted px-3 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-foreground/50">
+                  已連接
+                </p>
+                <p className="font-mono text-sm text-foreground" title={address ?? ""}>
+                  {address ? truncate(address) : ""}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => {
@@ -69,7 +78,9 @@ export function WalletConnectButton() {
               </p>
               <div className="space-y-1.5">
                 {wallets.length === 0 ? (
-                  <p className="text-sm text-foreground/50">未偵測到瀏覽器錢包。</p>
+                  <p className="text-sm text-foreground/50">
+                    還沒偵測到瀏覽器錢包，安裝一個 Wallet Standard 相容的錢包就能開始體驗。
+                  </p>
                 ) : (
                   wallets.map((wallet) => (
                     <button

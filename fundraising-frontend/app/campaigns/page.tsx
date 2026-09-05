@@ -33,7 +33,7 @@ export default async function CampaignsPage({
   return (
     <div className="mx-auto max-w-6xl px-6 py-12">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">探索募資專案</h1>
+        <h1 className="font-display text-3xl font-bold tracking-tight">探索募資專案</h1>
         <p className="mt-2 text-sm text-foreground/60">
           目前共有 {allCampaigns.length} 個進行中的專案，找一個你想支持的計畫吧。
         </p>
@@ -70,9 +70,12 @@ export default async function CampaignsPage({
       </div>
 
       {campaigns.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-foreground/50">
-          找不到符合條件的專案，換個關鍵字或分類看看。
-        </p>
+        <div className="rounded-lg border border-dashed border-border p-10 text-center">
+          <p className="text-sm font-medium text-foreground">這個條件目前還沒有對應的專案</p>
+          <p className="mt-1 text-sm text-foreground/50">
+            換個關鍵字或分類看看，也許下一個值得支持的好點子就在附近。
+          </p>
+        </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {campaigns.map((campaign) => (

@@ -1,25 +1,31 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  buySharesAction,
   claimInvestmentRewardAction,
   farmerBuyBackAllAction,
   runAnnualSettlementAction,
   setInvestmentStatusAction,
   type InvestmentActionState,
 } from "@/lib/actions";
+import { apiPost } from "@/lib/api-client";
 import { STATUS_LABELS } from "@/lib/campaigns";
 import { formatTWDT } from "@/lib/format";
+import { LAMPORTS_PER_SHARE_UNIT } from "@/lib/solana";
+import { useTreasuryPayment } from "@/lib/use-treasury-payment";
 import type { InvestmentTerms, InvestorPosition, ProjectStatus } from "@/lib/types";
-import { WalletStatusPanel } from "./wallet-status";
 
 const initialState: InvestmentActionState = { status: "idle" };
 
 function ActionMessage({ state }: { state: InvestmentActionState }) {
   if (state.status === "idle") return null;
   return (
-    <p role="status" className={`text-sm ${state.status === "success" ? "text-brand" : "text-danger"}`}>
+    <p
+      key={state.message}
+      role="status"
+      className={`text-sm opacity-0 [animation:fade-in_0.3s_ease-out_forwards] ${state.status === "success" ? "text-brand" : "text-danger"}`}
+    >
       {state.message}
     </p>
   );
@@ -34,13 +40,14 @@ export function InvestmentPanel({
   investment: InvestmentTerms;
   position: InvestorPosition;
 }) {
+  const router = useRouter();
+  const { pay, connected } = useTreasuryPayment();
   const soldOut = investment.mintedShares >= investment.totalShares;
   const remaining = investment.totalShares - investment.mintedShares;
 
-  const [buyState, buyAction, buyPending] = useActionState(
-    buySharesAction.bind(null, slug),
-    initialState
-  );
+  const [buyPending, setBuyPending] = useState(false);
+  const [buyState, setBuyState] = useState<InvestmentActionState>(initialState);
+
   const [claimState, claimAction, claimPending] = useActionState(
     claimInvestmentRewardAction.bind(null, slug),
     initialState
@@ -59,10 +66,35 @@ export function InvestmentPanel({
   );
   const [amount, setAmount] = useState(1);
 
+  async function handleBuy(e: React.FormEvent) {
+    e.preventDefault();
+    setBuyPending(true);
+    setBuyState(initialState);
+    try {
+      const lamports = amount * LAMPORTS_PER_SHARE_UNIT;
+      const signature = await pay(lamports);
+      await apiPost(`/campaigns/${slug}/buy-shares`, {
+        amount,
+        txSignature: signature,
+        amountLamports: lamports,
+      });
+      setBuyState({
+        status: "success",
+        message: `已成功購買 ${amount} 份 RWA Token（交易 ${signature.slice(0, 8)}…）`,
+      });
+      router.refresh();
+    } catch (error) {
+      setBuyState({
+        status: "error",
+        message: error instanceof Error ? error.message : "購買失敗，請稍後再試。",
+      });
+    } finally {
+      setBuyPending(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <WalletStatusPanel compact />
-
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <InfoRow label="每份價格" value={formatTWDT(investment.sharePrice)} />
         <InfoRow label="已售出" value={`${investment.mintedShares} / ${investment.totalShares} 份`} />
@@ -80,7 +112,7 @@ export function InvestmentPanel({
         </p>
       )}
 
-      <div className="rounded-xl border border-border p-4">
+      <div className="rounded-lg border border-border p-4">
         <p className="text-sm font-semibold text-foreground">你的持股</p>
         <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-foreground/70">
           <span>持有份數</span>
@@ -95,7 +127,7 @@ export function InvestmentPanel({
           <button
             type="submit"
             disabled={claimPending || position.pendingRewards <= 0 || investment.status === 3}
-            className="w-full rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-strong active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
           >
             {claimPending ? "領取中…" : "領取分紅"}
           </button>
@@ -103,10 +135,14 @@ export function InvestmentPanel({
         <ActionMessage state={claimState} />
       </div>
 
-      <form action={buyAction} className="flex flex-col gap-3 border-t border-border pt-4">
+      <form onSubmit={handleBuy} className="flex flex-col gap-3 border-t border-border pt-4">
         <label htmlFor="amount" className="text-sm font-medium text-foreground/70">
           購買 RWA Token（{formatTWDT(investment.sharePrice)} / 份，剩 {remaining} 份）
         </label>
+        <p className="text-xs text-foreground/50">
+          每份會透過 Solana 錢包發送 0.001 SOL Devnet 測試轉帳作為付款證明，
+          {connected ? "錢包已連接。" : "尚未連接錢包，送出時會請你先連接。"}
+        </p>
         <div className="flex gap-2">
           <input
             id="amount"
@@ -121,7 +157,7 @@ export function InvestmentPanel({
           <button
             type="submit"
             disabled={buyPending || soldOut || investment.status !== 1}
-            className="flex-1 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-strong active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
           >
             {buyPending ? "處理中…" : soldOut ? "已售罄" : "購買"}
           </button>
@@ -138,7 +174,7 @@ export function InvestmentPanel({
           <button
             type="submit"
             disabled={settlePending || !soldOut || investment.status !== 1}
-            className="w-full rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:border-brand/50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:border-brand/50 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
           >
             {settlePending ? "結算中…" : "執行年度結算"}
           </button>
@@ -155,7 +191,7 @@ export function InvestmentPanel({
               investment.buybackPrice <= 0 ||
               investment.buybackActive
             }
-            className="w-full rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:border-brand/50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:border-brand/50 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
           >
             {buybackPending
               ? "買回中…"
@@ -179,7 +215,7 @@ export function InvestmentPanel({
           <button
             type="submit"
             disabled={statusPending}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:border-brand/50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:border-brand/50 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
           >
             切換
           </button>

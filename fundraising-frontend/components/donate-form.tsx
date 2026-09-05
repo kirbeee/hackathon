@@ -1,25 +1,59 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { donateAction, type DonateFormState } from "@/lib/actions";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { apiPost } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/format";
+import { LAMPORTS_PER_SHARE_UNIT } from "@/lib/solana";
+import { useTreasuryPayment } from "@/lib/use-treasury-payment";
 import type { RewardTier } from "@/lib/types";
-import { WalletStatusPanel } from "./wallet-status";
 
-const initialState: DonateFormState = { status: "idle" };
+interface SubmitState {
+  status: "idle" | "success" | "error";
+  message?: string;
+}
 
 export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: RewardTier[] }) {
-  const [state, formAction, pending] = useActionState(
-    donateAction.bind(null, slug),
-    initialState
-  );
+  const router = useRouter();
+  const { pay, connected } = useTreasuryPayment();
   const firstAvailable = rewardTiers.find((t) => t.claimed < t.totalSupply);
   const [selectedTierId, setSelectedTierId] = useState(firstAvailable?.id ?? "");
+  const [backerName, setBackerName] = useState("");
+  const [message, setMessage] = useState("");
+  const [pending, setPending] = useState(false);
+  const [state, setState] = useState<SubmitState>({ status: "idle" });
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedTierId) return;
+
+    setPending(true);
+    setState({ status: "idle" });
+    try {
+      const signature = await pay(LAMPORTS_PER_SHARE_UNIT);
+      await apiPost(`/campaigns/${slug}/donate`, {
+        tierId: selectedTierId,
+        backerName,
+        message,
+        txSignature: signature,
+      });
+      setState({
+        status: "success",
+        message: `感謝你的支持！這個 RWA Token 已經是你的了（交易 ${signature.slice(0, 8)}…）`,
+      });
+      router.refresh();
+    } catch (error) {
+      setState({
+        status: "error",
+        message: error instanceof Error ? error.message : "贊助失敗，請稍後再試。",
+      });
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
-      <WalletStatusPanel compact />
-
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
         <span className="mb-2 block text-sm font-medium text-foreground/70">
           選擇 RWA Token 回饋方案
@@ -31,7 +65,7 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
             return (
               <label
                 key={t.id}
-                className={`flex cursor-pointer flex-col gap-1 rounded-xl border p-3 text-sm transition ${
+                className={`flex cursor-pointer flex-col gap-1 rounded-lg border p-3 text-sm transition ${
                   soldOut
                     ? "cursor-not-allowed border-border opacity-50"
                     : selectedTierId === t.id
@@ -75,7 +109,8 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
         </label>
         <input
           id="backerName"
-          name="backerName"
+          value={backerName}
+          onChange={(e) => setBackerName(e.target.value)}
           placeholder="匿名贊助者"
           className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
@@ -87,25 +122,32 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
         </label>
         <textarea
           id="message"
-          name="message"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
           rows={2}
           placeholder="加油！"
           className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
       </div>
 
+      <p className="text-xs text-foreground/50">
+        送出時會透過你連接的 Solana 錢包發送一筆 Devnet 測試轉帳（0.001 SOL）作為付款證明，
+        {connected ? "錢包已連接。" : "尚未連接錢包，送出時會請你先連接。"}
+      </p>
+
       <button
         type="submit"
         disabled={pending || !selectedTierId}
-        className="rounded-full bg-brand px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
+        className="rounded-full bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-accent-strong active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
       >
         {pending ? "處理中…" : "取得這個 RWA Token"}
       </button>
 
       {state.status !== "idle" && (
         <p
+          key={state.message}
           role="status"
-          className={`text-sm ${
+          className={`text-sm opacity-0 [animation:fade-in_0.3s_ease-out_forwards] ${
             state.status === "success" ? "text-brand-strong" : "text-danger"
           }`}
         >

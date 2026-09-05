@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 export function Reveal({
   children,
@@ -11,37 +11,21 @@ export function Reveal({
   delay?: number;
   className?: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
   // Must match the server's render (false) exactly, or React flags a
   // hydration mismatch on first paint — the reveal only starts after mount.
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-
-    if (typeof IntersectionObserver === "undefined") {
-      const frame = requestAnimationFrame(() => setVisible(true));
-      return () => cancelAnimationFrame(frame);
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.15 }
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
+    // A scroll-triggered (IntersectionObserver) reveal isn't reliable across
+    // every browser/environment, and this content shouldn't depend on it to
+    // be visible at all. Fade in shortly after mount instead — same pattern
+    // as the hero's own entrance.
+    const frame = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   return (
     <div
-      ref={ref}
       className={`transition-all duration-700 ease-out ${
         visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
       } ${className ?? ""}`}
