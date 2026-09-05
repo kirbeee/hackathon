@@ -20,7 +20,7 @@ export default function GlobalError({
       </span>
       <h2 className="font-display text-lg font-semibold text-foreground">連線稍微打結了，請重試</h2>
       <p className="text-sm text-foreground/60">
-        可能是募資資料的 API 服務還沒啟動，或暫時斷線了。稍等一下再試一次應該就會恢復。
+        可能是投資標的 API 尚未啟動或暫時斷線，請確認服務狀態後再試一次。
       </p>
       <button
         type="button"

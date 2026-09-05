@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "拾光募資｜讓每個好想法都有被支持的機會",
-  description: "群眾募資平台原型：探索專案、贊助支持，或發起你自己的募資計畫。",
+  title: "拾光 RWA｜小額私募債權投資平台",
+  description: "透過 RWA Tokenization 拆分私募債權，探索標的、認購單位並追蹤收益與風險。",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -91,7 +91,7 @@ export async function createCampaignAction(
     return { status: "error", message: "請寫一段至少 10 個字的專案簡介。" };
   }
   if (story.length < 30) {
-    return { status: "error", message: "請寫一段至少 30 個字的詳細說明，讓贊助者了解為什麼值得支持。" };
+    return { status: "error", message: "請寫一段至少 30 個字的發行說明，揭露資金用途與主要風險。" };
   }
   if (!CATEGORIES.includes(category)) {
     return { status: "error", message: "請選擇一個專案分類。" };
@@ -103,12 +103,12 @@ export async function createCampaignAction(
     return { status: "error", message: "請填寫執行地點。" };
   }
   if (!Number.isFinite(durationDays) || durationDays < 7 || durationDays > 90) {
-    return { status: "error", message: "募資天數請設定在 7 到 90 天之間。" };
+    return { status: "error", message: "認購期間請設定在 7 到 90 天之間。" };
   }
 
   const tiers = parseTiers(tiersRaw);
   if (!tiers || tiers.length === 0) {
-    return { status: "error", message: "請至少新增一個 RWA Token 回饋方案。" };
+    return { status: "error", message: "請至少新增一個 RWA Token 債權認購級距。" };
   }
   for (const t of tiers) {
     if (t.title.trim().length < 2) {

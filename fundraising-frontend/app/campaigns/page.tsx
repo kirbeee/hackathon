@@ -33,9 +33,9 @@ export default async function CampaignsPage({
   return (
     <div className="mx-auto max-w-6xl px-6 py-12">
       <div className="mb-8">
-        <h1 className="font-display text-3xl font-bold tracking-tight">探索募資專案</h1>
+        <h1 className="font-display text-3xl font-bold tracking-tight">探索 RWA 債權標的</h1>
         <p className="mt-2 text-sm text-foreground/60">
-          目前共有 {allCampaigns.length} 個進行中的專案，找一個你想支持的計畫吧。
+          目前共有 {allCampaigns.length} 個可查看標的，依產業、資金用途與風險選擇投資機會。
         </p>
       </div>
 
@@ -45,7 +45,7 @@ export default async function CampaignsPage({
           type="search"
           name="q"
           defaultValue={q}
-          placeholder="搜尋專案名稱或簡介"
+          placeholder="搜尋標的名稱、產業或資金用途"
           className="min-w-[220px] flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
         <button
@@ -71,9 +71,9 @@ export default async function CampaignsPage({
 
       {campaigns.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-10 text-center">
-          <p className="text-sm font-medium text-foreground">這個條件目前還沒有對應的專案</p>
+          <p className="text-sm font-medium text-foreground">目前沒有符合條件的投資標的</p>
           <p className="mt-1 text-sm text-foreground/50">
-            換個關鍵字或分類看看，也許下一個值得支持的好點子就在附近。
+            可調整關鍵字或產業分類，查看其他債權發行機會。
           </p>
         </div>
       ) : (

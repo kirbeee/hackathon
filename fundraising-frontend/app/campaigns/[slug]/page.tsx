@@ -71,7 +71,7 @@ export default async function CampaignDetailPage({
             <CategoryPill category={campaign.category} />
             {isInvestment && (
               <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground/60">
-                投資型 RWA 專案
+                RWA 債權投資標的
               </span>
             )}
           </div>
@@ -83,7 +83,7 @@ export default async function CampaignDetailPage({
           <p className="mt-6 text-base leading-relaxed text-foreground/80">{campaign.summary}</p>
 
           <div className="mt-8 border-t border-border pt-8">
-            <h2 className="mb-3 font-display text-lg font-semibold">專案說明</h2>
+            <h2 className="mb-3 font-display text-lg font-semibold">發行說明與償付來源</h2>
             <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/70">
               {campaign.story}
             </p>
@@ -91,7 +91,7 @@ export default async function CampaignDetailPage({
 
           {!isInvestment && (
             <div className="mt-10 border-t border-border pt-8">
-              <h2 className="mb-4 font-display text-lg font-semibold">RWA Token 回饋方案</h2>
+              <h2 className="mb-4 font-display text-lg font-semibold">RWA 債權認購方案</h2>
               <div className="flex flex-col gap-3">
                 {campaign.rewardTiers.map((t) => {
                   const remaining = t.totalSupply - t.claimed;
@@ -111,11 +111,11 @@ export default async function CampaignDetailPage({
                       </div>
                       <p className="mt-2 text-sm text-foreground/70">{t.description}</p>
                       <div className="mt-3 flex items-center justify-between text-xs text-foreground/50">
-                        <span>預計交付：{t.estimatedDelivery}</span>
+                        <span>預計到期：{t.estimatedDelivery}</span>
                         <span className={soldOut ? "font-medium text-danger" : undefined}>
                           {soldOut
-                            ? "已兌換完畢"
-                            : `已兌換 ${t.claimed} / ${t.totalSupply} 個 Token`}
+                            ? "已認購完畢"
+                            : `已認購 ${t.claimed} / ${t.totalSupply} 個單位`}
                         </span>
                       </div>
                     </div>
@@ -128,10 +128,9 @@ export default async function CampaignDetailPage({
           {isInvestment && (
             <>
               <div className="mt-10 rounded-lg border border-border bg-surface-muted p-4 text-xs leading-relaxed text-foreground/60">
-                此專案的 RWA Token 為投資型股份，機制對齊 contractTest 的 SafeHarvestNFT
-                合約：購買股份、年度結算分潤、農夫可依合約價格買回全部股份，投資人隨時可查看並領取待領分紅。
-                購買股份時會透過你的 Solana 錢包發送真實的 Devnet 測試轉帳，交易可在 Explorer 上查證；
-                年度結算、買回與領取分紅目前仍是後台模擬，尚未串接鏈上合約邏輯。
+                此標的以 RWA Token 記錄投資人持有單位，支援年度收益結算、發行方買回與待領收益查詢。
+                認購時會透過 Solana 錢包發送 Devnet 測試轉帳，交易可在 Explorer 查證；
+                收益結算、買回與本金償付目前仍為後台模擬，尚未串接正式鏈上合約。
               </div>
 
               <div className="mt-10 border-t border-border pt-8">
@@ -142,7 +141,7 @@ export default async function CampaignDetailPage({
                   <div className="rounded-lg border border-dashed border-border p-6 text-center">
                     <p className="text-sm font-medium text-foreground">目前還沒有鏈上交易紀錄</p>
                     <p className="mt-1 text-sm text-foreground/50">
-                      連接錢包購買第一份 RWA Token，交易會即時記錄在這裡。
+                      連接錢包認購第一份 RWA Token，交易會即時記錄在這裡。
                     </p>
                   </div>
                 ) : (
@@ -154,7 +153,7 @@ export default async function CampaignDetailPage({
                       >
                         <div>
                           <p className="font-medium text-foreground">
-                            購買 {tx.shares} 份・{(tx.amountLamports / 1_000_000_000).toFixed(6)} SOL
+                            認購 {tx.shares} 份・{(tx.amountLamports / 1_000_000_000).toFixed(6)} SOL
                           </p>
                           <p className="mt-0.5 text-xs text-foreground/50">
                             {formatDate(tx.createdAt)}
@@ -177,12 +176,12 @@ export default async function CampaignDetailPage({
           )}
 
           <div className="mt-10 border-t border-border pt-8">
-            <h2 className="mb-4 font-display text-lg font-semibold">支持者留言（{donations.length}）</h2>
+            <h2 className="mb-4 font-display text-lg font-semibold">投資人紀錄（{donations.length}）</h2>
             {donations.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border p-6 text-center">
-                <p className="text-sm font-medium text-foreground">目前尚無支持者留言</p>
+                <p className="text-sm font-medium text-foreground">目前尚無投資人認購紀錄</p>
                 <p className="mt-1 text-sm text-foreground/50">
-                  成為第一位支持者，留下一句話陪這個提案走下去吧！
+                  完成第一筆認購後，交易與投資備註會顯示在這裡。
                 </p>
               </div>
             ) : (
@@ -194,7 +193,7 @@ export default async function CampaignDetailPage({
                       <div className="flex items-center justify-between text-sm">
                         <span className="font-semibold">{donation.backerName}</span>
                         <span className="text-foreground/50">
-                          取得 {donationTier?.title ?? "方案"}・{formatCurrency(donation.amount)}
+                          認購 {donationTier?.title ?? "債權單位"}・{formatCurrency(donation.amount)}
                         </span>
                       </div>
                       {donation.message && (
@@ -218,13 +217,13 @@ export default async function CampaignDetailPage({
               {isInvestment ? formatTWDT(campaign.goalAmount) : formatCurrency(campaign.goalAmount)}{" "}
               ・{" "}
               <span className={funded >= 100 ? "font-medium text-brand-strong" : undefined}>
-                {funded}% 達成
+                {funded}% 已認購
               </span>
             </span>
             <ProgressBar percent={percent} />
             <div className="flex items-center justify-between text-sm text-foreground/60">
-              <span>{campaign.backerCount} 人響應</span>
-              <span>{daysLeft > 0 ? `剩 ${daysLeft} 天` : "已截止"}</span>
+              <span>{campaign.backerCount} 位投資人</span>
+              <span>{daysLeft > 0 ? `認購剩 ${daysLeft} 天` : "認購已截止"}</span>
             </div>
           </div>
 

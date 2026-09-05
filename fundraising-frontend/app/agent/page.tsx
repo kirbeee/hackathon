@@ -1,7 +1,7 @@
 import { AgentChat } from "@/components/agent-chat";
 
 export const metadata = {
-  title: "AI Agent 理財助理｜拾光募資",
+  title: "AI Agent 理財助理｜拾光 RWA",
   description: "讓 AI Agent 根據你的預算與風險偏好，自動分析並買入 RWA Token。",
 };
 

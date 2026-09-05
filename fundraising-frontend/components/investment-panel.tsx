@@ -155,7 +155,7 @@ export function InvestmentPanel({
       });
       setPaymentSignature(signature);
 
-      setBuyStage("付款已送出，正在回報募資後端…");
+      setBuyStage("付款已送出，正在回報投資交易後端…");
       const result = await completePaidSharePurchaseAction({
         slug,
         projectName,

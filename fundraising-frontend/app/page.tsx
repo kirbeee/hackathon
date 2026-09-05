@@ -77,22 +77,22 @@ export default async function HomePage() {
             style={heroFadeStyle(0)}
             className={`inline-flex items-center rounded-full border border-white/15 bg-white/5 px-4 py-1 text-sm font-medium text-white/70 ${HERO_FADE_CLASS}`}
           >
-            RWA 群眾募資平台原型
+            RWA 私募債權投資平台
           </span>
 
           <h1
             style={heroFadeStyle(80)}
             className={`max-w-3xl font-display text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl ${HERO_FADE_CLASS}`}
           >
-            讓好提案，找得到資金
+            讓大型債權，成為可負擔的小額投資
           </h1>
 
           <p
             style={heroFadeStyle(160)}
             className={`max-w-xl text-base text-white/60 ${HERO_FADE_CLASS}`}
           >
-            拾光募資用 RWA Token 讓小農地轉型、新創研發到獨立品牌新品，
-            都能找到快速、可驗證的資金來源。同時，它也是你熟悉的那種眼鏡、月餅禮盒、咖啡機預購募資。
+            從農業轉型、新創研發到品牌量產，平台將可驗證的資金需求拆分為
+            RWA Token，讓投資人以小額單位參與原本門檻較高的私募債權市場。
           </p>
 
           <div
@@ -103,13 +103,13 @@ export default async function HomePage() {
               href="/campaigns"
               className="rounded-full bg-accent px-7 py-3 text-sm font-semibold text-white transition hover:scale-105 hover:bg-accent-strong active:scale-95"
             >
-              開始探索
+              瀏覽投資標的
             </Link>
             <Link
               href="/campaigns/new"
               className="rounded-full border border-white/25 px-7 py-3 text-sm font-semibold text-white transition hover:scale-105 hover:border-white/60 active:scale-95"
             >
-              發起我的專案
+              申請債權發行
             </Link>
           </div>
 
@@ -133,19 +133,19 @@ export default async function HomePage() {
             className={`mt-6 grid max-w-2xl grid-cols-3 gap-6 text-left ${HERO_FADE_CLASS}`}
           >
             <div className="rounded-lg border border-white/10 bg-white/[0.06] px-4 py-3">
-              <dt className="text-xs text-white/70">累積募得金額</dt>
+              <dt className="text-xs text-white/70">累積認購金額</dt>
               <dd className="text-2xl font-bold text-brand">
                 <AnimatedCounter value={totalRaised} suffix=" 元" />
               </dd>
             </div>
             <div className="rounded-lg border border-white/10 bg-white/[0.06] px-4 py-3">
-              <dt className="text-xs text-white/70">支持人次</dt>
+              <dt className="text-xs text-white/70">投資人次</dt>
               <dd className="text-2xl font-bold text-brand">
                 <AnimatedCounter value={totalBackers} />
               </dd>
             </div>
             <div className="rounded-lg border border-white/10 bg-white/[0.06] px-4 py-3">
-              <dt className="text-xs text-white/70">進行中專案</dt>
+              <dt className="text-xs text-white/70">存續中標的</dt>
               <dd className="text-2xl font-bold text-brand">
                 <AnimatedCounter value={campaigns.length} />
               </dd>
@@ -170,16 +170,16 @@ export default async function HomePage() {
       <section className="mx-auto max-w-6xl px-6 py-16">
         <Reveal className="mb-8 flex items-end justify-between">
           <div>
-            <h2 className="font-display text-2xl font-semibold">熱門進行中專案</h2>
+            <h2 className="font-display text-2xl font-semibold">熱門債權標的</h2>
             <p className="mt-1 text-sm text-foreground/60">
-              達成率最高的三個專案
+              認購進度最高的三個發行專案
             </p>
           </div>
           <Link
             href="/campaigns"
             className="text-sm font-medium text-brand hover:underline"
           >
-            查看全部
+              查看全部標的
           </Link>
         </Reveal>
         <div className="grid gap-6 sm:grid-cols-3">
@@ -194,9 +194,9 @@ export default async function HomePage() {
       <section className="border-t border-border bg-surface-muted">
         <div className="mx-auto max-w-6xl px-6 py-16">
           <Reveal>
-            <h2 className="font-display text-2xl font-semibold">什麼是 RWA 募資？</h2>
+            <h2 className="font-display text-2xl font-semibold">什麼是 RWA 債權投資？</h2>
             <p className="mt-2 max-w-2xl text-sm text-foreground/60">
-              從一個缺乏管道的好提案，到支持者拿到看得到的成果，五個階段一目了然。
+              從資金需求、資產驗證、小額發行到收益分配與到期償付，五個階段一目了然。
             </p>
           </Reveal>
           <Reveal delay={150} className="mt-8">
@@ -215,8 +215,8 @@ export default async function HomePage() {
               </span>
             </div>
             <p className="mt-2 max-w-2xl text-sm text-foreground/60">
-              投資型 RWA 專案的結算與買回都有明確規則可循，AI Agent
-              可以代替你盯盤， 在對的時機自動領取分紅、完成買回交割。
+              RWA 債權的結算、收益分配與買回皆有明確規則，AI Agent
+              可協助追蹤標的狀態，在授權範圍內執行領取與交割。
             </p>
           </Reveal>
           <Reveal delay={100} className="mt-8 divide-y divide-border border-t border-border sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:border-t-0">
@@ -244,20 +244,20 @@ export default async function HomePage() {
           <Reveal className="flex flex-col items-center gap-5">
             <h2 className="font-display text-2xl font-semibold">準備好開始了嗎？</h2>
             <p className="max-w-md text-sm text-foreground/60">
-              瀏覽正在募資的專案，或是把你的提案拆成 RWA Token，讓資金找上門。
+              瀏覽可認購的債權標的，或將企業資金需求轉化為可驗證、可拆分的 RWA Token。
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/campaigns"
                 className="rounded-full bg-accent px-7 py-3 text-sm font-semibold text-white transition hover:scale-105 hover:bg-accent-strong active:scale-95"
               >
-                開始探索
+                瀏覽投資標的
               </Link>
               <Link
                 href="/campaigns/new"
                 className="rounded-full border border-foreground/20 px-7 py-3 text-sm font-semibold text-foreground transition hover:scale-105 hover:border-foreground/50 active:scale-95"
               >
-                發起我的專案
+                申請債權發行
               </Link>
             </div>
           </Reveal>

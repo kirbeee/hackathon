@@ -6,30 +6,30 @@ interface JourneyStep {
 
 const STEPS: JourneyStep[] = [
   {
-    tag: "動機",
-    title: "缺乏管道的好提案",
+    tag: "需求",
+    title: "企業提出資金需求",
     description:
-      "小農地轉型、新創研發、獨立品牌新品，傳統資金市場往往只挑得起大型機構認可的計畫。",
+      "企業揭露資金用途、償付來源與期限，提出具體的債權融資需求。",
   },
   {
-    tag: "提案",
-    title: "拆成 RWA Token 方案",
-    description: "發起人把商品、產出或權益拆成可驗證的 RWA Token 方案，公開上架。",
+    tag: "驗證",
+    title: "驗證底層資產",
+    description: "平台檢視營運資料、訂單或實體資產，確認債權所依據的現實世界價值。",
   },
   {
-    tag: "支持",
-    title: "支持者選擇方案",
-    description: "支持者用資金換取對應的 Token，取得商品、服務或產出分潤權益。",
+    tag: "發行",
+    title: "拆分小額債權單位",
+    description: "大型資金需求透過 Tokenization 拆分，投資人可依自身額度認購 RWA Token。",
   },
   {
-    tag: "履約",
-    title: "達標後交付與追蹤",
-    description: "發起人依 Token 條件出貨或履約，所有進度與資金流向公開可查。",
+    tag: "管理",
+    title: "追蹤收益與風險",
+    description: "平台持續揭露資金用途、營運狀態、收益分配與剩餘本金。",
   },
   {
-    tag: "結果",
-    title: "雙方都拿到看得到的成果",
-    description: "發起人拿到資金啟動計畫；支持者拿到驗證得到的商品與回饋。",
+    tag: "償付",
+    title: "依條件還本付息",
+    description: "發行方依約定條件分配收益並償還本金，鏈上保留可追蹤紀錄。",
   },
 ];
 
@@ -82,7 +82,7 @@ export function JourneyRing() {
 
         <div className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border border-border bg-surface text-center">
           <span className="text-xs font-bold text-brand">RWA</span>
-          <span className="text-[10px] text-foreground/50">募資循環</span>
+          <span className="text-[10px] text-foreground/50">投資流程</span>
         </div>
 
         {stepAngles.map((angle, i) => {

@@ -54,7 +54,7 @@ export function CampaignCard({
         )}
         {featured && (
           <span className="absolute left-3 top-3 rounded-full bg-surface/90 px-3 py-1 text-xs font-semibold text-brand-strong">
-            達成率最高
+            認購率最高
           </span>
         )}
       </div>
@@ -63,8 +63,8 @@ export function CampaignCard({
           <CategoryPill category={campaign.category} />
           <span className="text-xs font-medium text-foreground/40">
             {isInvestment
-              ? "投資型 RWA 專案"
-              : `${campaign.rewardTiers.length} 種 RWA Token 方案`}
+              ? "RWA 債權投資標的"
+              : `${campaign.rewardTiers.length} 種債權認購方案`}
           </span>
         </div>
         <h3
@@ -84,7 +84,7 @@ export function CampaignCard({
         <p className="text-xs text-foreground/50">
           {isInvestment
             ? `每份 ${formatTWDT(campaign.investment!.sharePrice)}`
-            : `${formatCurrency(startingPrice!)} 起`}
+            : `每單位 ${formatCurrency(startingPrice!)}`}
         </p>
 
         <div className="mt-auto flex flex-col gap-2 pt-2">
@@ -96,12 +96,12 @@ export function CampaignCard({
                 : `${formatCompactNumber(campaign.raisedAmount)} 元`}
             </span>
             <span className={funded >= 100 ? "font-medium text-brand-strong" : "text-foreground/50"}>
-              {funded}% 達成
+              {funded}% 已認購
             </span>
           </div>
           <div className="flex items-center justify-between text-xs text-foreground/50">
-            <span>{campaign.backerCount} 人響應</span>
-            <span>{daysLeft > 0 ? `剩 ${daysLeft} 天` : "已截止"}</span>
+            <span>{campaign.backerCount} 位投資人</span>
+            <span>{daysLeft > 0 ? `認購剩 ${daysLeft} 天` : "認購已截止"}</span>
           </div>
         </div>
       </div>

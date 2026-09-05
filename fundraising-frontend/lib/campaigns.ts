@@ -60,6 +60,10 @@ export async function getOnChainTransactions(slug: string): Promise<OnChainTrans
   );
 }
 
+export async function buyShares(slug: string, amount: number): Promise<void> {
+  await apiPost(`/campaigns/${encodeURIComponent(slug)}/buy-shares`, { amount });
+}
+
 export async function runAnnualSettlement(slug: string): Promise<void> {
   await apiPost(`/campaigns/${encodeURIComponent(slug)}/settle`);
 }

@@ -11,19 +11,19 @@ export function SiteHeader() {
             <Image src="/cathay-tree.svg" alt="國泰世華" width={34} height={25} />
           </span>
           <span className="whitespace-nowrap text-base font-bold tracking-tight text-foreground sm:text-lg">
-            拾光募資
+            拾光 RWA
           </span>
         </Link>
 
         <nav className="hidden items-center gap-8 text-sm font-medium text-foreground/70 sm:flex">
           <Link href="/campaigns" className="transition hover:text-foreground">
-            探索專案
+            投資標的
           </Link>
           <Link
             href="/campaigns/new"
             className="transition hover:text-foreground"
           >
-            發起募資
+            債權發行
           </Link>
         </nav>
 
@@ -33,7 +33,7 @@ export function SiteHeader() {
             href="/campaigns/new"
             className="whitespace-nowrap rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-accent-strong active:scale-95 sm:px-5 sm:py-2 sm:text-sm"
           >
-            發起專案
+            申請發行
           </Link>
         </div>
       </div>
