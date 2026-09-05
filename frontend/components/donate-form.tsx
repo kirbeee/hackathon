@@ -50,6 +50,7 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
         txSignature: signature,
         backerName,
         message,
+        walletAddress: String(connected.account.address),
       });
       if (result.status === "error") {
         throw new Error(result.message ?? "兌換失敗，請稍後再試。");

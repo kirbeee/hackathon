@@ -69,6 +69,7 @@ class Donation(BaseModel):
     message: Optional[str] = None
     createdAt: str
     txSignature: Optional[str] = None
+    walletAddress: Optional[str] = None
 
 
 class OnChainTransaction(BaseModel):
@@ -80,6 +81,32 @@ class OnChainTransaction(BaseModel):
     shares: int
     txSignature: str
     createdAt: str
+    walletAddress: Optional[str] = None
+
+
+class WalletDonationRecord(BaseModel):
+    campaignSlug: str
+    campaignTitle: str
+    tierId: str
+    amount: float
+    message: Optional[str] = None
+    createdAt: str
+    txSignature: Optional[str] = None
+
+
+class WalletInvestmentRecord(BaseModel):
+    campaignSlug: str
+    campaignTitle: str
+    amountLamports: int
+    shares: int
+    txSignature: str
+    createdAt: str
+
+
+class WalletHistoryResponse(BaseModel):
+    walletAddress: str
+    donations: list[WalletDonationRecord]
+    investments: list[WalletInvestmentRecord]
 
 
 class Campaign(BaseModel):
@@ -112,12 +139,14 @@ class DonateRequest(BaseModel):
     backerName: str = ""
     message: str = ""
     txSignature: Optional[str] = None
+    walletAddress: Optional[str] = None
 
 
 class BuySharesRequest(BaseModel):
     amount: int
     txSignature: Optional[str] = None
     amountLamports: Optional[int] = None
+    walletAddress: Optional[str] = None
 
 
 class ConfigResponse(BaseModel):

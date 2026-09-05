@@ -2,10 +2,16 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { buyShares, claimInvestmentReward, createCampaign, donate } from "./campaigns";
+import {
+  buyShares,
+  claimInvestmentReward,
+  createCampaign,
+  donate,
+  getWalletHistory,
+} from "./campaigns";
 import { ApiError } from "./api-client";
 import { rwaAmountForPayment } from "./rwa-payment";
-import type { CampaignCategory, PaymentCurrency } from "./types";
+import type { CampaignCategory, PaymentCurrency, WalletHistory } from "./types";
 
 export interface CampaignFormState {
   status: "idle" | "error";
@@ -212,7 +218,7 @@ export async function submitDemoSharePurchaseAction(input: {
       throw new Error(`認購請求失敗（HTTP ${response.status}），請確認後端服務。`);
     }
 
-    await buyShares(input.slug, shareAmount);
+    await buyShares(input.slug, shareAmount, input.walletAddress.trim());
     return `認購完成，已登記 ${input.rwaTokenAmount} 枚 RWA Token。`;
   });
 }
@@ -257,6 +263,7 @@ export async function reportDonationAction(input: {
   txSignature: string;
   backerName?: string;
   message?: string;
+  walletAddress?: string;
 }): Promise<InvestmentActionState> {
   return runInvestmentAction(input.slug, async () => {
     const result = await donate(
@@ -264,8 +271,30 @@ export async function reportDonationAction(input: {
       input.tierId,
       input.txSignature,
       input.backerName,
-      input.message
+      input.message,
+      input.walletAddress
     );
     return result.message;
   });
+}
+
+export interface WalletHistoryState {
+  status: "idle" | "success" | "error";
+  message?: string;
+  data?: WalletHistory;
+}
+
+/** Looks up a wallet's donation/investment history server-side (same reasoning
+ * as reportDonationAction: keeps the call to `backend` off the browser). */
+export async function lookupWalletHistoryAction(address: string): Promise<WalletHistoryState> {
+  const trimmed = address.trim();
+  if (!trimmed) {
+    return { status: "error", message: "請輸入錢包地址。" };
+  }
+  try {
+    const data = await getWalletHistory(trimmed);
+    return { status: "success", data };
+  } catch (error) {
+    return { status: "error", message: errorMessage(error, "查詢失敗，請稍後再試。") };
+  }
 }

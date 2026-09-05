@@ -44,6 +44,45 @@ def test_buy_shares_without_tx_signature_logs_nothing():
     assert client.get(f"/campaigns/{slug}/transactions").json() == []
 
 
+def test_wallet_history_collects_donations_and_investments_across_campaigns():
+    wallet = "WalletAddr111111111111111111111111111111"
+    other_wallet = "OtherWallet2222222222222222222222222222"
+
+    client.post(
+        "/campaigns/friendly-citrus-orchard-transition/buy-shares",
+        json={
+            "amount": 1,
+            "txSignature": "sig-shares-1",
+            "amountLamports": 1_000_000,
+            "walletAddress": wallet,
+        },
+    )
+    client.post(
+        "/campaigns/artisan-mid-autumn-mooncake-box/donate",
+        json={"tierId": "t1", "txSignature": "sig-donate-1", "walletAddress": wallet},
+    )
+    client.post(
+        "/campaigns/artisan-mid-autumn-mooncake-box/donate",
+        json={"tierId": "t1", "txSignature": "sig-donate-2", "walletAddress": other_wallet},
+    )
+
+    history = client.get(f"/wallets/{wallet}/history").json()
+    assert history["walletAddress"] == wallet
+    assert len(history["donations"]) == 1
+    assert history["donations"][0]["txSignature"] == "sig-donate-1"
+    assert history["donations"][0]["campaignSlug"] == "artisan-mid-autumn-mooncake-box"
+    assert len(history["investments"]) == 1
+    assert history["investments"][0]["txSignature"] == "sig-shares-1"
+    assert history["investments"][0]["campaignSlug"] == "friendly-citrus-orchard-transition"
+
+    assert client.get(f"/wallets/{other_wallet}/history").json()["donations"][0]["txSignature"] == "sig-donate-2"
+    assert client.get("/wallets/never-used-address/history").json() == {
+        "walletAddress": "never-used-address",
+        "donations": [],
+        "investments": [],
+    }
+
+
 def test_list_campaigns_has_seed_data():
     res = client.get("/campaigns")
     assert res.status_code == 200

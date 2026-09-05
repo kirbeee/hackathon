@@ -555,6 +555,7 @@ def add_donation(
     backer_name: str,
     message: str,
     tx_signature: Optional[str] = None,
+    wallet_address: Optional[str] = None,
 ) -> Donation:
     global _next_donation_seq
     campaign = next((c for c in campaigns if c.id == campaign_id), None)
@@ -578,6 +579,7 @@ def add_donation(
         message=message.strip() or None,
         createdAt=datetime.now(timezone.utc).isoformat(),
         txSignature=tx_signature,
+        walletAddress=wallet_address,
     )
     _next_donation_seq += 1
 
@@ -597,6 +599,7 @@ def buy_shares(
     amount: int,
     tx_signature: Optional[str] = None,
     amount_lamports: Optional[int] = None,
+    wallet_address: Optional[str] = None,
 ) -> None:
     global _next_tx_seq
     campaign = _get_investment_campaign(campaign_id)
@@ -630,9 +633,25 @@ def buy_shares(
                 shares=amount,
                 txSignature=tx_signature,
                 createdAt=datetime.now(timezone.utc).isoformat(),
+                walletAddress=wallet_address,
             )
         )
         _next_tx_seq += 1
+
+
+def get_wallet_history(wallet_address: str) -> tuple[list[Donation], list[OnChainTransaction]]:
+    """All donations/investment purchases a wallet address paid for, newest first."""
+    matched_donations = sorted(
+        (d for d in donations if d.walletAddress == wallet_address),
+        key=lambda d: d.createdAt,
+        reverse=True,
+    )
+    matched_transactions = sorted(
+        (t for t in onchain_transactions if t.walletAddress == wallet_address),
+        key=lambda t: t.createdAt,
+        reverse=True,
+    )
+    return matched_donations, matched_transactions
 
 
 def get_onchain_transactions(campaign_id: str) -> list[OnChainTransaction]:

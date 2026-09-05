@@ -25,7 +25,9 @@ async def main():
     print(f"sent devnet payment, signature: {signature}")
     print(f"explorer: https://explorer.solana.com/tx/{signature}?cluster=devnet")
 
-    result = await fundraising_client.buy_shares(slug, amount, signature, lamports)
+    result = await fundraising_client.buy_shares(
+        slug, amount, signature, lamports, solana_wallet.agent_pubkey()
+    )
     print("fundraising-api response:", json.dumps(result, ensure_ascii=False))
 
     campaign_after = await fundraising_client.get_campaign(slug)

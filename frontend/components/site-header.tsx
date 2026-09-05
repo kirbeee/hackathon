@@ -23,6 +23,9 @@ export function SiteHeader() {
           <Link href="/agent" className="transition hover:text-foreground">
             AI Agent
           </Link>
+          <Link href="/me" className="transition hover:text-foreground">
+            我的紀錄
+          </Link>
         </nav>
 
         <div className="flex items-center justify-end gap-2 sm:gap-3">

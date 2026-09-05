@@ -24,6 +24,9 @@ from app.models import (
     Donation,
     InvestorPosition,
     OnChainTransaction,
+    WalletDonationRecord,
+    WalletHistoryResponse,
+    WalletInvestmentRecord,
 )
 
 app = FastAPI(title="Fundraising API", version="0.1.0")
@@ -94,12 +97,55 @@ def get_transactions(slug: str) -> list[OnChainTransaction]:
     return store.get_onchain_transactions(campaign.id)
 
 
+@app.get("/wallets/{address}/history", response_model=WalletHistoryResponse)
+def get_wallet_history(address: str) -> WalletHistoryResponse:
+    """Every donation/investment purchase a wallet address paid for, across all
+    campaigns -- keyed by the walletAddress reported alongside each payment's
+    txSignature, not by any account/session (there isn't one in this demo)."""
+    donations, transactions = store.get_wallet_history(address)
+    campaigns_by_id = {c.id: c for c in store.list_campaigns()}
+
+    return WalletHistoryResponse(
+        walletAddress=address,
+        donations=[
+            WalletDonationRecord(
+                campaignSlug=campaigns_by_id[d.campaignId].slug,
+                campaignTitle=campaigns_by_id[d.campaignId].title,
+                tierId=d.tierId,
+                amount=d.amount,
+                message=d.message,
+                createdAt=d.createdAt,
+                txSignature=d.txSignature,
+            )
+            for d in donations
+            if d.campaignId in campaigns_by_id
+        ],
+        investments=[
+            WalletInvestmentRecord(
+                campaignSlug=campaigns_by_id[t.campaignId].slug,
+                campaignTitle=campaigns_by_id[t.campaignId].title,
+                amountLamports=t.amountLamports,
+                shares=t.shares,
+                txSignature=t.txSignature,
+                createdAt=t.createdAt,
+            )
+            for t in transactions
+            if t.campaignId in campaigns_by_id
+        ],
+    )
+
+
 @app.post("/campaigns/{slug}/donate", response_model=ActionResult)
 def donate(slug: str, body: DonateRequest) -> ActionResult:
     campaign = _require_campaign(slug)
     try:
         store.add_donation(
-            campaign.id, body.tierId, body.backerName, body.message, body.txSignature
+            campaign.id,
+            body.tierId,
+            body.backerName,
+            body.message,
+            body.txSignature,
+            body.walletAddress,
         )
     except store.ActionError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -112,7 +158,9 @@ def buy_shares(slug: str, body: BuySharesRequest) -> ActionResult:
     if body.amount <= 0:
         raise HTTPException(status_code=400, detail="請輸入大於 0 的購買股數。")
     try:
-        store.buy_shares(campaign.id, body.amount, body.txSignature, body.amountLamports)
+        store.buy_shares(
+            campaign.id, body.amount, body.txSignature, body.amountLamports, body.walletAddress
+        )
     except store.ActionError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return ActionResult(message=f"已成功購買 {body.amount} 份 RWA Token。")

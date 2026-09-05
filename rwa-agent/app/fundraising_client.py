@@ -37,7 +37,9 @@ async def get_config() -> dict:
         return resp.json()
 
 
-async def buy_shares(slug: str, amount: int, tx_signature: str, amount_lamports: int) -> dict:
+async def buy_shares(
+    slug: str, amount: int, tx_signature: str, amount_lamports: int, wallet_address: str
+) -> dict:
     async with await _client() as client:
         resp = await client.post(
             f"/campaigns/{slug}/buy-shares",
@@ -45,6 +47,7 @@ async def buy_shares(slug: str, amount: int, tx_signature: str, amount_lamports:
                 "amount": amount,
                 "txSignature": tx_signature,
                 "amountLamports": amount_lamports,
+                "walletAddress": wallet_address,
             },
         )
         if resp.status_code >= 400:
@@ -52,7 +55,9 @@ async def buy_shares(slug: str, amount: int, tx_signature: str, amount_lamports:
         return resp.json()
 
 
-async def donate(slug: str, tier_id: str, tx_signature: str, backer_name: str = "RWA Agent") -> dict:
+async def donate(
+    slug: str, tier_id: str, tx_signature: str, wallet_address: str, backer_name: str = "RWA Agent"
+) -> dict:
     async with await _client() as client:
         resp = await client.post(
             f"/campaigns/{slug}/donate",
@@ -61,6 +66,7 @@ async def donate(slug: str, tier_id: str, tx_signature: str, backer_name: str = 
                 "backerName": backer_name,
                 "message": "AI Agent 自動化買入",
                 "txSignature": tx_signature,
+                "walletAddress": wallet_address,
             },
         )
         if resp.status_code >= 400:

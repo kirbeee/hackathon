@@ -127,7 +127,9 @@ async def buy_rwa(slug: str, amount: int = 1, tier_id: str | None = None) -> str
     if campaign["fundingModel"] == "investment":
         lamports = amount * lamports_per_unit
         signature = await solana_wallet.send_payment(treasury, lamports)
-        result = await fundraising_client.buy_shares(slug, amount, signature, lamports)
+        result = await fundraising_client.buy_shares(
+            slug, amount, signature, lamports, solana_wallet.agent_pubkey()
+        )
         return json.dumps(
             {
                 "slug": slug,
@@ -149,7 +151,9 @@ async def buy_rwa(slug: str, amount: int = 1, tier_id: str | None = None) -> str
         chosen_tier = available[0]["id"]
 
     signature = await solana_wallet.send_payment(treasury, lamports_per_unit)
-    result = await fundraising_client.donate(slug, chosen_tier, signature)
+    result = await fundraising_client.donate(
+        slug, chosen_tier, signature, solana_wallet.agent_pubkey()
+    )
     return json.dumps(
         {
             "slug": slug,

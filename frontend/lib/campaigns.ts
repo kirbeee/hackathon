@@ -6,6 +6,7 @@ import type {
   InvestorPosition,
   OnChainTransaction,
   ProjectStatus,
+  WalletHistory,
 } from "./types";
 
 export const CATEGORY_LABELS: Record<CampaignCategory, string> = {
@@ -60,8 +61,12 @@ export async function getOnChainTransactions(slug: string): Promise<OnChainTrans
   );
 }
 
-export async function buyShares(slug: string, amount: number): Promise<void> {
-  await apiPost(`/campaigns/${encodeURIComponent(slug)}/buy-shares`, { amount });
+export async function buyShares(
+  slug: string,
+  amount: number,
+  walletAddress?: string
+): Promise<void> {
+  await apiPost(`/campaigns/${encodeURIComponent(slug)}/buy-shares`, { amount, walletAddress });
 }
 
 export async function donate(
@@ -69,14 +74,26 @@ export async function donate(
   tierId: string,
   txSignature: string,
   backerName?: string,
-  message?: string
+  message?: string,
+  walletAddress?: string
 ): Promise<{ message: string }> {
   return apiPost<{ message: string }>(`/campaigns/${encodeURIComponent(slug)}/donate`, {
     tierId,
     backerName,
     message,
     txSignature,
+    walletAddress,
   });
+}
+
+export async function getWalletHistory(address: string): Promise<WalletHistory> {
+  return (
+    (await apiGet<WalletHistory>(`/wallets/${encodeURIComponent(address)}/history`)) ?? {
+      walletAddress: address,
+      donations: [],
+      investments: [],
+    }
+  );
 }
 
 export async function claimInvestmentReward(slug: string): Promise<number> {

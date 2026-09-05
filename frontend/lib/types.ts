@@ -94,3 +94,28 @@ export interface Campaign {
   rewardTiers: RewardTier[];
   investment?: InvestmentTerms;
 }
+
+export interface WalletDonationRecord {
+  campaignSlug: string;
+  campaignTitle: string;
+  tierId: string;
+  amount: number;
+  message?: string;
+  createdAt: string;
+  txSignature?: string;
+}
+
+export interface WalletInvestmentRecord {
+  campaignSlug: string;
+  campaignTitle: string;
+  amountLamports: number;
+  shares: number;
+  txSignature: string;
+  createdAt: string;
+}
+
+export interface WalletHistory {
+  walletAddress: string;
+  donations: WalletDonationRecord[];
+  investments: WalletInvestmentRecord[];
+}
