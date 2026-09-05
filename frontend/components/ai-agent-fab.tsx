@@ -48,10 +48,10 @@ export function AiAgentFab() {
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
       {open && (
-        <div className="flex max-h-[32rem] w-[22rem] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-md [animation:pop-in_0.15s_ease-out]">
+        <div className="flex max-h-[min(32rem,calc(100vh-10rem))] w-[22rem] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-md [animation:pop-in_0.15s_ease-out]">
           {showIntro ? (
-            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
-              <div className="flex items-start justify-between gap-2">
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex shrink-0 items-start justify-between gap-2 border-b border-border p-5 pb-3">
                 <span className="inline-flex items-center rounded-full bg-brand-soft px-2.5 py-1 text-[11px] font-medium text-brand-strong">
                   Devnet 測試網示範
                 </span>
@@ -64,29 +64,33 @@ export function AiAgentFab() {
                   ✕
                 </button>
               </div>
-              <h2 className="font-display text-lg font-semibold text-foreground">AI Agent 理財助理</h2>
-              <p className="text-sm leading-relaxed text-foreground/60">
-                AI Agent 會根據你說的預算與風險偏好，分析平台上真實的專案資料、計算風險分數，並自動用
-                Solana devnet 測試 SOL 下單購買。目前只會主動買入，不會賣出或監控後續市場變化，且使用的是
-                測試網資金，不涉及真實金錢。
-              </p>
+              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
+                <h2 className="font-display text-lg font-semibold text-foreground">AI Agent 理財助理</h2>
+                <p className="text-sm leading-relaxed text-foreground/60">
+                  AI Agent 會根據你說的預算與風險偏好，分析平台上真實的專案資料、計算風險分數，並自動用
+                  Solana devnet 測試 SOL 下單購買。目前只會主動買入，不會賣出或監控後續市場變化，且使用的是
+                  測試網資金，不涉及真實金錢。
+                </p>
 
-              <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-foreground/40">
-                運作方式
-              </p>
-              <ol className="flex flex-col gap-3">
-                {STEPS.map((step, i) => (
-                  <li key={step.title} className="flex gap-3">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">
-                      {i + 1}
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{step.title}</p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-foreground/60">{step.description}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-foreground/40">
+                  運作方式
+                </p>
+                <ol className="flex flex-col gap-3">
+                  {STEPS.map((step, i) => (
+                    <li key={step.title} className="flex gap-3">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">
+                        {i + 1}
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{step.title}</p>
+                        <p className="mt-0.5 text-xs leading-relaxed text-foreground/60">
+                          {step.description}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </div>
           ) : (
             <AgentChat onClose={() => setOpen(false)} />
