@@ -232,6 +232,7 @@ export default async function CampaignDetailPage({
             {isInvestment && investorPosition ? (
               <InvestmentPanel
                 slug={campaign.slug}
+                projectName={campaign.title}
                 investment={campaign.investment!}
                 position={investorPosition}
               />

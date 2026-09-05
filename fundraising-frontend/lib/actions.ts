@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
+  buyShares,
   claimInvestmentReward,
   createCampaign,
   farmerBuyBackAll,
@@ -10,7 +11,7 @@ import {
   setInvestmentStatus,
 } from "./campaigns";
 import { ApiError } from "./api-client";
-import type { CampaignCategory, ProjectStatus } from "./types";
+import type { CampaignCategory, PaymentCurrency, ProjectStatus } from "./types";
 
 export interface CampaignFormState {
   status: "idle" | "error";
@@ -155,6 +156,101 @@ async function runInvestmentAction(
   }
 }
 
+export async function buySharesAction(
+  slug: string,
+  _prevState: InvestmentActionState,
+  formData: FormData
+): Promise<InvestmentActionState> {
+  const amount = Number(formData.get("amount"));
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { status: "error", message: "請輸入大於 0 的購買股數。" };
+  }
+
+  return runInvestmentAction(slug, async () => {
+    await buyShares(slug, Math.floor(amount));
+    return `已成功購買 ${Math.floor(amount)} 份 RWA Token。`;
+  });
+}
+
+export async function completePaidSharePurchaseAction(input: {
+  slug: string;
+  projectName: string;
+  shareAmount: number;
+  rwaTokenAmount: string;
+  currency: PaymentCurrency;
+  paymentAmount: string;
+  walletAddress: string;
+  endpoint?: string;
+}): Promise<InvestmentActionState> {
+  const shareAmount = input.shareAmount;
+  if (!Number.isFinite(shareAmount) || shareAmount <= 0) {
+    return { status: "error", message: "請輸入大於 0 的購買股數。" };
+  }
+  if (!/^\d+(?:\.\d+)?$/.test(input.rwaTokenAmount) || Number(input.rwaTokenAmount) <= 0) {
+    return { status: "error", message: "換算後的 RWA Token 數量無效。" };
+  }
+  if (input.currency !== "USDC" && input.currency !== "TWD") {
+    return { status: "error", message: "不支援的付款幣別。" };
+  }
+  if (!/^\d+(?:\.\d+)?$/.test(input.paymentAmount) || Number(input.paymentAmount) <= 0) {
+    return { status: "error", message: "請輸入有效的付款金額。" };
+  }
+  if (!input.projectName.trim() || !input.walletAddress.trim()) {
+    return { status: "error", message: "專案名稱或付款錢包地址缺失。" };
+  }
+
+  return runInvestmentAction(input.slug, async () => {
+    const endpoint = input.endpoint?.trim() || process.env.FUNDRAISING_PAYMENT_ENDPOINT?.trim();
+    if (!endpoint || endpoint.toLowerCase() === "none") {
+      throw new Error("付款回報 Endpoint 尚未設定，請在購買區塊輸入 Endpoint。");
+    }
+    let endpointUrl: URL;
+    try {
+      endpointUrl = new URL(endpoint);
+    } catch {
+      throw new Error("付款回報 Endpoint 格式不正確。");
+    }
+    if (endpointUrl.protocol !== "http:" && endpointUrl.protocol !== "https:") {
+      throw new Error("付款回報 Endpoint 只支援 HTTP 或 HTTPS。");
+    }
+
+    const response = await fetch(endpointUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        projectName: input.projectName.trim(),
+        rwaTokenAmount: input.rwaTokenAmount,
+        walletAddress: input.walletAddress.trim(),
+      }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`付款已送出，但後端回報失敗（HTTP ${response.status}），請勿重複付款。`);
+    }
+
+    await buyShares(input.slug, shareAmount);
+    return `付款完成，已成功購買 ${input.rwaTokenAmount} 枚 RWA Token。`;
+  });
+}
+
+export async function validatePaymentReportingAction(
+  endpointOverride?: string
+): Promise<InvestmentActionState> {
+  const endpoint = endpointOverride?.trim() || process.env.FUNDRAISING_PAYMENT_ENDPOINT?.trim();
+  if (!endpoint || endpoint.toLowerCase() === "none") {
+    return { status: "error", message: "請輸入付款回報 Endpoint。" };
+  }
+  try {
+    const endpointUrl = new URL(endpoint);
+    if (endpointUrl.protocol !== "http:" && endpointUrl.protocol !== "https:") {
+      return { status: "error", message: "Endpoint 只支援 HTTP 或 HTTPS。" };
+    }
+  } catch {
+    return { status: "error", message: "Endpoint 格式不正確。" };
+  }
+  return { status: "success" };
+}
 export async function claimInvestmentRewardAction(
   slug: string,
   _prevState: InvestmentActionState

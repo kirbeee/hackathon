@@ -1,22 +1,45 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState, useState, type FormEvent } from "react";
+import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
+import { useClient } from "@solana/react";
 import {
   claimInvestmentRewardAction,
+  completePaidSharePurchaseAction,
   farmerBuyBackAllAction,
   runAnnualSettlementAction,
   setInvestmentStatusAction,
+  validatePaymentReportingAction,
   type InvestmentActionState,
 } from "@/lib/actions";
-import { apiPost } from "@/lib/api-client";
+import type { AppClient } from "@/app/providers";
 import { STATUS_LABELS } from "@/lib/campaigns";
 import { formatTWDT } from "@/lib/format";
-import { LAMPORTS_PER_SHARE_UNIT } from "@/lib/solana";
-import { useTreasuryPayment } from "@/lib/use-treasury-payment";
-import type { InvestmentTerms, InvestorPosition, ProjectStatus } from "@/lib/types";
+import { sendTokenPayment } from "@/lib/token-payment";
+import type {
+  InvestmentTerms,
+  InvestorPosition,
+  PaymentCurrency,
+  ProjectStatus,
+} from "@/lib/types";
 
 const initialState: InvestmentActionState = { status: "idle" };
+const TWD_PER_USDC = 30;
+const MAX_PAYMENT_TWD = 30_000;
+const PAYMENT_TOLERANCE_TWD = 0.001;
+
+function formatPaymentAmount(value: number): string {
+  return value.toFixed(6).replace(/\.?0+$/, "");
+}
+
+function requiredPaymentAmount(
+  currency: PaymentCurrency,
+  shareAmount: number,
+  sharePriceTwd: number
+): string {
+  const totalTwd = shareAmount * sharePriceTwd;
+  return formatPaymentAmount(currency === "USDC" ? totalTwd / TWD_PER_USDC : totalTwd);
+}
 
 function ActionMessage({ state }: { state: InvestmentActionState }) {
   if (state.status === "idle") return null;
@@ -33,21 +56,19 @@ function ActionMessage({ state }: { state: InvestmentActionState }) {
 
 export function InvestmentPanel({
   slug,
+  projectName,
   investment,
   position,
 }: {
   slug: string;
+  projectName: string;
   investment: InvestmentTerms;
   position: InvestorPosition;
 }) {
-  const router = useRouter();
-  const { pay, connected } = useTreasuryPayment();
+  const client = useClient<AppClient>();
+  const connected = useConnectedWallet(client);
   const soldOut = investment.mintedShares >= investment.totalShares;
   const remaining = investment.totalShares - investment.mintedShares;
-
-  const [buyPending, setBuyPending] = useState(false);
-  const [buyState, setBuyState] = useState<InvestmentActionState>(initialState);
-
   const [claimState, claimAction, claimPending] = useActionState(
     claimInvestmentRewardAction.bind(null, slug),
     initialState
@@ -64,31 +85,95 @@ export function InvestmentPanel({
     setInvestmentStatusAction.bind(null, slug),
     initialState
   );
-  const [amount, setAmount] = useState(1);
+  const [currency, setCurrency] = useState<PaymentCurrency>("USDC");
+  const [paymentAmount, setPaymentAmount] = useState(() =>
+    requiredPaymentAmount("USDC", 1, investment.sharePrice)
+  );
+  const [tokenPrice, setTokenPrice] = useState(String(investment.sharePrice));
+  const [backendEndpoint, setBackendEndpoint] = useState("");
+  const [buyState, setBuyState] = useState<InvestmentActionState>(initialState);
+  const [buyPending, setBuyPending] = useState(false);
+  const [buyStage, setBuyStage] = useState<string | null>(null);
+  const [paymentSignature, setPaymentSignature] = useState<string | null>(null);
+  const numericPaymentAmount = Number(paymentAmount);
+  const paymentTwdEquivalent =
+    currency === "USDC" ? numericPaymentAmount * TWD_PER_USDC : numericPaymentAmount;
+  const numericTokenPrice = Number(tokenPrice);
+  const numericRwaTokenAmount = Math.floor(paymentTwdEquivalent / numericTokenPrice);
+  const rwaTokenAmount =
+    Number.isFinite(numericRwaTokenAmount) && numericRwaTokenAmount > 0
+      ? formatPaymentAmount(numericRwaTokenAmount)
+      : "";
 
-  async function handleBuy(e: React.FormEvent) {
-    e.preventDefault();
+  async function handlePurchase(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!connected?.signer) {
+      setBuyState({ status: "error", message: "請先連接 Phantom 錢包。" });
+      return;
+    }
+    if (!Number.isFinite(numericTokenPrice) || numericTokenPrice <= 0) {
+      setBuyState({ status: "error", message: "請輸入有效的 RWA Token 價格。" });
+      return;
+    }
+    if (
+      !Number.isFinite(numericRwaTokenAmount) ||
+      numericRwaTokenAmount < 1 ||
+      numericRwaTokenAmount > remaining
+    ) {
+      setBuyState({
+        status: "error",
+        message: `換算後的 RWA Token 數量必須介於 1 和 ${remaining} 之間。`,
+      });
+      return;
+    }
+    if (!Number.isFinite(numericPaymentAmount) || numericPaymentAmount <= 0) {
+      setBuyState({ status: "error", message: "請輸入有效的付款金額。" });
+      return;
+    }
+    if (paymentTwdEquivalent > MAX_PAYMENT_TWD + PAYMENT_TOLERANCE_TWD) {
+      setBuyState({ status: "error", message: "單筆付款不得超過 NT$30,000 等值 Token。" });
+      return;
+    }
+
     setBuyPending(true);
     setBuyState(initialState);
+    setPaymentSignature(null);
+
     try {
-      const lamports = amount * LAMPORTS_PER_SHARE_UNIT;
-      const signature = await pay(lamports);
-      await apiPost(`/campaigns/${slug}/buy-shares`, {
-        amount,
-        txSignature: signature,
-        amountLamports: lamports,
+      const reporting = await validatePaymentReportingAction(backendEndpoint);
+      if (reporting.status === "error") {
+        setBuyState(reporting);
+        return;
+      }
+
+      setBuyStage("等待 Phantom 確認付款…");
+      const signature = await sendTokenPayment({
+        client,
+        signer: connected.signer,
+        currency,
+        amount: paymentAmount,
       });
-      setBuyState({
-        status: "success",
-        message: `已成功購買 ${amount} 份 RWA Token（交易 ${signature.slice(0, 8)}…）`,
+      setPaymentSignature(signature);
+
+      setBuyStage("付款已送出，正在回報募資後端…");
+      const result = await completePaidSharePurchaseAction({
+        slug,
+        projectName,
+        shareAmount: numericRwaTokenAmount,
+        rwaTokenAmount,
+        currency,
+        paymentAmount,
+        walletAddress: String(connected.account.address),
+        endpoint: backendEndpoint,
       });
-      router.refresh();
+      setBuyState(result);
     } catch (error) {
       setBuyState({
         status: "error",
-        message: error instanceof Error ? error.message : "購買失敗，請稍後再試。",
+        message: error instanceof Error ? error.message : "付款失敗，請稍後再試。",
       });
     } finally {
+      setBuyStage(null);
       setBuyPending(false);
     }
   }
@@ -135,34 +220,131 @@ export function InvestmentPanel({
         <ActionMessage state={claimState} />
       </div>
 
-      <form onSubmit={handleBuy} className="flex flex-col gap-3 border-t border-border pt-4">
-        <label htmlFor="amount" className="text-sm font-medium text-foreground/70">
+      <form onSubmit={handlePurchase} className="flex flex-col gap-3 border-t border-border pt-4">
+        <label htmlFor="paymentAmount" className="text-sm font-medium text-foreground/70">
           購買 RWA Token（{formatTWDT(investment.sharePrice)} / 份，剩 {remaining} 份）
         </label>
-        <p className="text-xs text-foreground/50">
-          每份會透過 Solana 錢包發送 0.001 SOL Devnet 測試轉帳作為付款證明，
-          {connected ? "錢包已連接。" : "尚未連接錢包，送出時會請你先連接。"}
+        <div>
+          <label htmlFor="backendEndpoint" className="mb-1 block text-xs text-foreground/50">
+            付款回報 Endpoint（Demo）
+          </label>
+          <input
+            id="backendEndpoint"
+            type="url"
+            value={backendEndpoint}
+            onChange={(event) => setBackendEndpoint(event.target.value)}
+            disabled={buyPending}
+            placeholder="http://127.0.0.1:8000/payment"
+            autoComplete="url"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-xs outline-none focus:border-brand"
+          />
+          <p className="mt-1 text-xs text-foreground/40">
+            可在每次 Demo 前自由更換；留空時使用伺服器環境變數設定。
+          </p>
+        </div>
+        <div className="grid grid-cols-[5rem_1fr] gap-2">
+          <label htmlFor="paymentCurrency" className="self-center text-xs text-foreground/50">
+            付款幣別
+          </label>
+          <select
+            id="paymentCurrency"
+            value={currency}
+            onChange={(event) => {
+              const nextCurrency = event.target.value as PaymentCurrency;
+              setCurrency(nextCurrency);
+              setPaymentAmount(
+                formatPaymentAmount(
+                  nextCurrency === "USDC"
+                    ? paymentTwdEquivalent / TWD_PER_USDC
+                    : paymentTwdEquivalent
+                )
+              );
+            }}
+            disabled={buyPending}
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
+          >
+            <option value="USDC">USDC</option>
+            <option value="TWD">TWD Token</option>
+          </select>
+
+          <label htmlFor="paymentAmount" className="self-center text-xs text-foreground/50">
+            支付金額
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="paymentAmount"
+              type="number"
+              min="0.000001"
+              step="0.000001"
+              inputMode="decimal"
+              value={paymentAmount}
+              onChange={(event) => setPaymentAmount(event.target.value)}
+              disabled={buyPending}
+              className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
+            />
+            <span className="w-16 text-xs font-semibold text-foreground/60">{currency}</span>
+          </div>
+
+          <label htmlFor="tokenPrice" className="self-center text-xs text-foreground/50">
+            Token 價格（TWD）
+          </label>
+          <input
+            id="tokenPrice"
+            type="number"
+            min="0.000001"
+            step="0.000001"
+            value={tokenPrice}
+            onChange={(event) => setTokenPrice(event.target.value)}
+            disabled={buyPending}
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
+          />
+
+          <label htmlFor="rwaTokenAmount" className="self-center text-xs text-foreground/50">
+            RWA Token 數量
+          </label>
+          <input
+            id="rwaTokenAmount"
+            type="text"
+            value={rwaTokenAmount}
+            readOnly
+            className="rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm text-foreground/70 outline-none"
+          />
+        </div>
+        <p className="rounded-lg bg-surface-muted px-3 py-2 text-xs text-foreground/60">
+          本次付款等值 NT${Number.isFinite(paymentTwdEquivalent) ? paymentTwdEquivalent.toLocaleString("zh-TW") : "—"}
+          ，換算 {rwaTokenAmount || "—"} 枚 RWA Token，單筆上限 NT$30,000
+          {currency === "USDC" ? "（1 USDC = 30 TWD）" : ""}
         </p>
         <div className="flex gap-2">
-          <input
-            id="amount"
-            name="amount"
-            type="number"
-            min={1}
-            max={Math.max(remaining, 1)}
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value) || 1)}
-            className="w-24 rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
-          />
           <button
             type="submit"
-            disabled={buyPending || soldOut || investment.status !== 1}
+            disabled={
+              buyPending ||
+              soldOut ||
+              !rwaTokenAmount ||
+              numericRwaTokenAmount < 1 ||
+              numericRwaTokenAmount > remaining ||
+              paymentTwdEquivalent > MAX_PAYMENT_TWD ||
+              investment.status !== 1 ||
+              !connected?.signer
+            }
             className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-strong active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
           >
-            {buyPending ? "處理中…" : soldOut ? "已售罄" : "購買"}
+            {buyPending ? "處理中…" : soldOut ? "已售罄" : connected?.signer ? "購買" : "請先連接錢包"}
           </button>
         </div>
+        {buyStage && <p role="status" className="text-sm text-foreground/60">{buyStage}</p>}
         <ActionMessage state={buyState} />
+        {paymentSignature && (
+          <a
+            href={`https://explorer.solana.com/tx/${paymentSignature}?cluster=devnet`}
+            target="_blank"
+            rel="noreferrer"
+            className="break-all text-xs font-medium text-brand hover:underline"
+          >
+            查看 devnet 付款交易：{paymentSignature}
+          </a>
+        )}
       </form>
 
       <div className="flex flex-col gap-3 border-t border-border pt-4">

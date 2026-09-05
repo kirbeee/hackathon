@@ -7,6 +7,7 @@ export type CampaignCategory =
   | "design";
 
 export type FundingModel = "reward" | "investment";
+export type PaymentCurrency = "USDC" | "TWD";
 
 /** Contract status codes from SafeHarvestNFT.sol: 1=normal, 2=withdraw-only, 3=locked. */
 export type ProjectStatus = 1 | 2 | 3;
