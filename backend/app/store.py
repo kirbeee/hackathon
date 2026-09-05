@@ -172,7 +172,7 @@ def _seed() -> None:
         summary="本案以 AI 客服模組研發所需資金為基礎，發行小額 RWA Token；募集資金投入工程團隊與運算資源，並由後續 SaaS 營運收入依發行條件償付。",
         story=(
             "本案由已服務 200 多家中小企業的 B2B SaaS 團隊提出，資金將用於 AI 客服協作模組的工程開發、測試驗證及 GPU 運算成本。"
-            "研發資金需求被拆分為 200 份 RWA Token，每份代表本案約定債權的一部分經濟權益。目前認購已完成並進入存續管理階段，投資人可查看年度結算、待領收益及剩餘本金。"
+            "研發資金需求被拆分為 200 份 RWA Token，每份代表本案約定債權的一部分經濟權益。目前開放認購中，募集完成後將依發行條件進行年度結算與收益分配。"
             "本案主要償付來源為既有 SaaS 訂閱與新模組商業化收入。投資人仍須留意研發延期、技術成果、市場需求、成本超支及新創公司信用等風險。"
         ),
         category="startup",
@@ -185,7 +185,7 @@ def _seed() -> None:
         investment=InvestmentTerms(
             farmerName="迴響科技 Reson Labs",
             totalShares=200,
-            mintedShares=200,
+            mintedShares=150,
             sharePrice=8_000,
             buildCost=1_600_000,
             annualIncome=500_000,
@@ -193,11 +193,11 @@ def _seed() -> None:
             interestRate=8,
             premiumRate=6,
             status=1,
-            currentYear=1,
-            cumulativePrincipal=300_000,
-            remainingPrincipal=1_300_000,
+            currentYear=0,
+            cumulativePrincipal=0,
+            remainingPrincipal=1_600_000,
             buybackActive=False,
-            buybackPrice=1_696_000,
+            buybackPrice=0,
             holderCount=96,
             tokenSymbol="RWA-SAAS",
         ),
@@ -428,7 +428,7 @@ def _seed() -> None:
     )
     investor_positions.append(
         InvestorPosition(
-            campaignId="c2", shareCount=5, tokenIds=[11, 12, 13, 14, 15], pendingRewards=7_500
+            campaignId="c2", shareCount=5, tokenIds=[11, 12, 13, 14, 15], pendingRewards=0
         )
     )
 

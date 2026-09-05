@@ -114,10 +114,35 @@ def test_buy_shares_updates_position_and_raised_amount():
     assert after["raisedAmount"] == before["raisedAmount"] + 3 * 3_000
 
 
+def test_ai_campaign_opens_for_purchase():
+    slug = "ai-support-copilot-rd-fund"
+    before = client.get(f"/campaigns/{slug}").json()
+    terms = before["investment"]
+    assert terms["status"] == 1
+    assert terms["totalShares"] - terms["mintedShares"] == 50
+    assert terms["currentYear"] == 0
+    assert terms["cumulativePrincipal"] == 0
+    assert terms["remainingPrincipal"] == terms["buildCost"]
+    assert terms["buybackPrice"] == 0
+    assert client.get(f"/campaigns/{slug}/position").json()["pendingRewards"] == 0
+
+    res = client.post(f"/campaigns/{slug}/buy-shares", json={"amount": 1})
+    assert res.status_code == 200
+    after = client.get(f"/campaigns/{slug}").json()
+    assert after["investment"]["mintedShares"] == terms["mintedShares"] + 1
+    assert after["raisedAmount"] == before["raisedAmount"] + terms["sharePrice"]
+    assert client.get(f"/campaigns/{slug}/position").json()["shareCount"] == 6
+
+
 def test_buy_shares_rejects_exceeding_supply():
-    # ai-support-copilot-rd-fund is already fully sold out in seed data
-    res = client.post("/campaigns/ai-support-copilot-rd-fund/buy-shares", json={"amount": 1})
+    res = client.post("/campaigns/ai-support-copilot-rd-fund/buy-shares", json={"amount": 51})
     assert res.status_code == 400
+
+
+def test_ai_campaign_rejects_purchase_after_last_share():
+    slug = "ai-support-copilot-rd-fund"
+    assert client.post(f"/campaigns/{slug}/buy-shares", json={"amount": 50}).status_code == 200
+    assert client.post(f"/campaigns/{slug}/buy-shares", json={"amount": 1}).status_code == 400
 
 
 def test_settlement_requires_sold_out():
@@ -127,6 +152,15 @@ def test_settlement_requires_sold_out():
 
 def test_full_investment_lifecycle_settle_buyback_claim():
     slug = "ai-support-copilot-rd-fund"
+    # Set up the fully funded, first-year state explicitly for lifecycle coverage.
+    campaign = store.get_campaign_by_slug(slug)
+    campaign.investment.mintedShares = campaign.investment.totalShares
+    campaign.raisedAmount = campaign.goalAmount
+    campaign.investment.currentYear = 1
+    campaign.investment.cumulativePrincipal = 300_000
+    campaign.investment.remainingPrincipal = 1_300_000
+    campaign.investment.buybackPrice = 1_696_000
+    store.get_investor_position(campaign.id).pendingRewards = 7_500
 
     before_position = client.get(f"/campaigns/{slug}/position").json()
     assert before_position["pendingRewards"] == 7_500
