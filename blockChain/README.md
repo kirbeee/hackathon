@@ -1,4 +1,6 @@
 # Quick note
+
+[//]: # (Depercate!!!)
 ## Setting up
 1. sudo apt-get update
 
@@ -22,3 +24,24 @@ run  validator
 
 ### create wallet
 `solana-keygen new -o /Users/sean_lin/.config/solana/id.json`
+
+## 學習如何發幣
+`spl-token create-token --decimals 9`
+
+Creating token CUZimkUatueVssxVSQG6aVP57YBBCs93atamJdsYrNzD under program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
+Address:  CUZimkUatueVssxVSQG6aVP57YBBCs93atamJdsYrNzD
+Decimals:  9
+Signature: xrntjYKepBhbro7YC64XxJhafYK1NtTxJneoLPWKyd8Kvuhyb9FNENTcoofKp854mUqrk1oNFMeuQagWRkDjH1T
+
+`pl-token create-account CUZimkUatueVssxVSQG6aVP57YBBCs93atamJdsYrNzD`
+
+Creating account 4GrYmxqyiPL9N4Wfpc9Wii7ZDLRbgZgoowHZ6jT7FUYB
+Signature: qmBErF6eQn9cSAabYKuUcwPtUPHKft9xSkMK295Drz7WAtmQYnFkzdCSFrNuzkqKhYuDYEryawScLogLwQYeVuv
+
+`spl-token mint CUZimkUatueVssxVSQG6aVP57YBBCs93atamJdsYrNzD 100000000`
+Minting 100000000 tokens
+  Token: CUZimkUatueVssxVSQG6aVP57YBBCs93atamJdsYrNzD
+  Recipient: 4GrYmxqyiPL9N4Wfpc9Wii7ZDLRbgZgoowHZ6jT7FUYB
+Signature: 2fJSi4VcD3dpuApTrGJLPBhPLLXk2E6fznXVUFaL7bpjZRxTgKZ2y7XJWYsaZtnCFEik2Z4cUBCZbKb5fFG79ZJu
+
+
