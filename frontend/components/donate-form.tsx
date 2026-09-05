@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiPost } from "@/lib/api-client";
+import { reportDonationAction } from "@/lib/actions";
 import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
 import type { AppClient } from "@/app/providers";
@@ -44,12 +44,16 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
         currency: "USDC",
         amount: (selectedTier.price / TWD_PER_USDC).toFixed(6),
       });
-      await apiPost(`/campaigns/${slug}/donate`, {
+      const result = await reportDonationAction({
+        slug,
         tierId: selectedTierId,
+        txSignature: signature,
         backerName,
         message,
-        txSignature: signature,
       });
+      if (result.status === "error") {
+        throw new Error(result.message ?? "兌換失敗，請稍後再試。");
+      }
       setState({
         status: "success",
         message: `兌換完成，RWA Token 已存入你的紀錄（交易 ${signature.slice(0, 8)}…）`,

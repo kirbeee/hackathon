@@ -14,6 +14,7 @@ from pathlib import Path
 from solana.exceptions import SolanaRpcException
 from solana.rpc.async_api import AsyncClient
 from solana.rpc.commitment import Confirmed
+from solana.rpc.models import TxOpts
 from solders.keypair import Keypair
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
@@ -83,15 +84,15 @@ async def _ensure_funded(client: AsyncClient, min_lamports: int) -> None:
         )
 
 
+_MAX_SEND_ATTEMPTS = 3
+
+
 async def send_payment(to_address: str, lamports: int) -> str:
     """Send a real devnet SOL payment from the agent's wallet, returning the tx signature."""
     to_pubkey = Pubkey.from_string(to_address)
 
     async with AsyncClient(settings.solana_rpc_url) as client:
         await _ensure_funded(client, lamports + _FEE_BUFFER_LAMPORTS)
-
-        blockhash_resp = await client.get_latest_blockhash(commitment=Confirmed)
-        recent_blockhash = blockhash_resp.value.blockhash
 
         instruction = transfer(
             TransferParams(
@@ -100,12 +101,33 @@ async def send_payment(to_address: str, lamports: int) -> str:
                 lamports=lamports,
             )
         )
-        message = MessageV0.try_compile(
-            _keypair.pubkey(), [instruction], [], recent_blockhash
-        )
-        transaction = VersionedTransaction(message, [_keypair])
 
-        send_resp = await client.send_transaction(transaction)
-        signature = send_resp.value
-        await client.confirm_transaction(signature, commitment=Confirmed)
-        return str(signature)
+        last_error: Exception | None = None
+        for _ in range(_MAX_SEND_ATTEMPTS):
+            blockhash_resp = await client.get_latest_blockhash(commitment=Confirmed)
+            recent_blockhash = blockhash_resp.value.blockhash
+            message = MessageV0.try_compile(
+                _keypair.pubkey(), [instruction], [], recent_blockhash
+            )
+            transaction = VersionedTransaction(message, [_keypair])
+
+            try:
+                # skip_preflight: api.devnet.solana.com load-balances across nodes
+                # whose blockhash views can lag each other by a slot or two, so the
+                # preflight simulation sometimes rejects a blockhash the cluster
+                # itself accepts a moment later ("Blockhash not found"). Skipping it
+                # lets the real submission (validated cluster-wide, not by one node)
+                # decide; the retry loop still covers a blockhash that is genuinely
+                # too stale by the time it reaches the leader.
+                send_resp = await client.send_transaction(
+                    transaction,
+                    opts=TxOpts(skip_preflight=True, preflight_commitment=Confirmed),
+                )
+                signature = send_resp.value
+                await client.confirm_transaction(signature, commitment=Confirmed)
+                return str(signature)
+            except Exception as e:  # noqa: BLE001 - retry on any send/confirm failure
+                last_error = e
+
+        assert last_error is not None
+        raise last_error

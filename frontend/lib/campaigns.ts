@@ -64,6 +64,21 @@ export async function buyShares(slug: string, amount: number): Promise<void> {
   await apiPost(`/campaigns/${encodeURIComponent(slug)}/buy-shares`, { amount });
 }
 
+export async function donate(
+  slug: string,
+  tierId: string,
+  txSignature: string,
+  backerName?: string,
+  message?: string
+): Promise<{ message: string }> {
+  return apiPost<{ message: string }>(`/campaigns/${encodeURIComponent(slug)}/donate`, {
+    tierId,
+    backerName,
+    message,
+    txSignature,
+  });
+}
+
 export async function claimInvestmentReward(slug: string): Promise<number> {
   const result = await apiPost<{ message: string; amount: number | null }>(
     `/campaigns/${encodeURIComponent(slug)}/claim-reward`

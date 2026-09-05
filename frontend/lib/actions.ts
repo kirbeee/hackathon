@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { buyShares, claimInvestmentReward, createCampaign } from "./campaigns";
+import { buyShares, claimInvestmentReward, createCampaign, donate } from "./campaigns";
 import { ApiError } from "./api-client";
 import { rwaAmountForPayment } from "./rwa-payment";
 import type { CampaignCategory, PaymentCurrency } from "./types";
@@ -241,5 +241,31 @@ export async function claimInvestmentRewardAction(
   return runInvestmentAction(slug, async () => {
     const amount = await claimInvestmentReward(slug);
     return `已領取分紅 ${amount.toLocaleString("zh-TW")} TWDT。`;
+  });
+}
+
+/**
+ * Reports an already-completed on-chain payment to `backend`. Runs server-side
+ * (this file is "use server") so the call never leaves the Next.js server as a
+ * browser fetch -- avoids Chrome's Local Network Access permission prompt that
+ * blocks a public-origin page (the Cloudflare tunnel) from reaching the
+ * loopback backend directly, which otherwise strands an already-paid donation.
+ */
+export async function reportDonationAction(input: {
+  slug: string;
+  tierId: string;
+  txSignature: string;
+  backerName?: string;
+  message?: string;
+}): Promise<InvestmentActionState> {
+  return runInvestmentAction(input.slug, async () => {
+    const result = await donate(
+      input.slug,
+      input.tierId,
+      input.txSignature,
+      input.backerName,
+      input.message
+    );
+    return result.message;
   });
 }
