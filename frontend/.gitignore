@@ -30,9 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (.env.example is the template and should be committed)
+# env files (commit the template and shared public demo configuration)
 .env*
 !.env.example
+!/.env.local
 
 # vercel
 .vercel
