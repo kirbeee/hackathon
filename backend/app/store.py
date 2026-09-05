@@ -161,8 +161,6 @@ def _seed() -> None:
             currentYear=0,
             cumulativePrincipal=0,
             remainingPrincipal=900_000,
-            buybackActive=False,
-            buybackPrice=0,
             holderCount=178,
             tokenSymbol="RWA-CITRUS",
         ),
@@ -200,8 +198,6 @@ def _seed() -> None:
             currentYear=0,
             cumulativePrincipal=0,
             remainingPrincipal=1_600_000,
-            buybackActive=False,
-            buybackPrice=0,
             holderCount=96,
             tokenSymbol="RWA-SAAS",
         ),
@@ -452,8 +448,6 @@ def _seed() -> None:
             currentYear=1,
             cumulativePrincipal=225_000,
             remainingPrincipal=4_775_000,
-            buybackActive=False,
-            buybackPrice=0,
             holderCount=356,
             tokenSymbol="RWA-CATHAY-XINYI",
         ),
@@ -639,47 +633,6 @@ def get_onchain_transactions(campaign_id: str) -> list[OnChainTransaction]:
     )
 
 
-def run_annual_settlement(campaign_id: str) -> None:
-    campaign = _get_investment_campaign(campaign_id)
-    terms = campaign.investment
-    assert terms is not None
-
-    if terms.status != 1:
-        raise ActionError("專案目前非正常運作狀態，無法結算")
-    if terms.mintedShares != terms.totalShares:
-        raise ActionError("尚未售罄，無法執行年度結算")
-
-    terms.currentYear += 1
-    investor_income = (terms.annualIncome * terms.investorSharePercent) / 100
-    terms.cumulativePrincipal = min(terms.cumulativePrincipal + investor_income, terms.buildCost)
-    terms.remainingPrincipal = terms.buildCost - terms.cumulativePrincipal
-    terms.buybackPrice = (terms.buildCost * (100 + terms.premiumRate)) / 100
-
-    reward_per_share = investor_income / terms.totalShares
-    position = _ensure_position(campaign_id)
-    position.pendingRewards += reward_per_share * position.shareCount
-
-
-def farmer_buy_back_all(campaign_id: str) -> None:
-    campaign = _get_investment_campaign(campaign_id)
-    terms = campaign.investment
-    assert terms is not None
-
-    if terms.mintedShares != terms.totalShares:
-        raise ActionError("尚未售罄，無法執行買回")
-    if terms.status != 1:
-        raise ActionError("專案狀態不允許買回")
-    if terms.buybackPrice <= 0:
-        raise ActionError("尚未計算買回價格，請先執行年度結算")
-
-    per_share = terms.buybackPrice / terms.totalShares
-    position = _ensure_position(campaign_id)
-    position.pendingRewards += per_share * position.shareCount
-
-    terms.buybackActive = True
-    terms.status = 2
-
-
 def claim_investment_reward(campaign_id: str) -> float:
     campaign = _get_investment_campaign(campaign_id)
     terms = campaign.investment
@@ -694,17 +647,7 @@ def claim_investment_reward(campaign_id: str) -> float:
         raise ActionError("目前沒有可領取的分紅")
 
     position.pendingRewards = 0
-    if terms.buybackActive:
-        position.shareCount = 0
-        position.tokenIds = []
-
     return amount
-
-
-def set_investment_status(campaign_id: str, status: int) -> None:
-    campaign = _get_investment_campaign(campaign_id)
-    assert campaign.investment is not None
-    campaign.investment.status = status  # type: ignore[assignment]
 
 
 # ---- campaign creation -------------------------------------------------------

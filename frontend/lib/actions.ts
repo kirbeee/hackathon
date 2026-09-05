@@ -2,16 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import {
-  buyShares,
-  claimInvestmentReward,
-  createCampaign,
-  farmerBuyBackAll,
-  runAnnualSettlement,
-  setInvestmentStatus,
-} from "./campaigns";
+import { buyShares, claimInvestmentReward, createCampaign } from "./campaigns";
 import { ApiError } from "./api-client";
-import type { CampaignCategory, PaymentCurrency, ProjectStatus } from "./types";
+import type { CampaignCategory, PaymentCurrency } from "./types";
 
 export interface CampaignFormState {
   status: "idle" | "error";
@@ -156,22 +149,6 @@ async function runInvestmentAction(
   }
 }
 
-export async function buySharesAction(
-  slug: string,
-  _prevState: InvestmentActionState,
-  formData: FormData
-): Promise<InvestmentActionState> {
-  const amount = Number(formData.get("amount"));
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return { status: "error", message: "請輸入大於 0 的購買股數。" };
-  }
-
-  return runInvestmentAction(slug, async () => {
-    await buyShares(slug, Math.floor(amount));
-    return `已成功購買 ${Math.floor(amount)} 份 RWA Token。`;
-  });
-}
-
 export async function completePaidSharePurchaseAction(input: {
   slug: string;
   projectName: string;
@@ -258,41 +235,5 @@ export async function claimInvestmentRewardAction(
   return runInvestmentAction(slug, async () => {
     const amount = await claimInvestmentReward(slug);
     return `已領取分紅 ${amount.toLocaleString("zh-TW")} TWDT。`;
-  });
-}
-
-export async function runAnnualSettlementAction(
-  slug: string,
-  _prevState: InvestmentActionState
-): Promise<InvestmentActionState> {
-  return runInvestmentAction(slug, async () => {
-    await runAnnualSettlement(slug);
-    return "年度結算已完成，分紅已計入你的待領餘額。";
-  });
-}
-
-export async function farmerBuyBackAllAction(
-  slug: string,
-  _prevState: InvestmentActionState
-): Promise<InvestmentActionState> {
-  return runInvestmentAction(slug, async () => {
-    await farmerBuyBackAll(slug);
-    return "農夫已買回全部股份，買回款已計入你的待領餘額。";
-  });
-}
-
-export async function setInvestmentStatusAction(
-  slug: string,
-  _prevState: InvestmentActionState,
-  formData: FormData
-): Promise<InvestmentActionState> {
-  const status = Number(formData.get("status")) as ProjectStatus;
-  if (status !== 1 && status !== 2 && status !== 3) {
-    return { status: "error", message: "無效的狀態代碼。" };
-  }
-
-  return runInvestmentAction(slug, async () => {
-    await setInvestmentStatus(slug, status);
-    return "專案狀態已更新。";
   });
 }

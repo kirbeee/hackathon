@@ -129,7 +129,6 @@ def test_ai_campaign_opens_for_purchase():
     assert terms["currentYear"] == 0
     assert terms["cumulativePrincipal"] == 0
     assert terms["remainingPrincipal"] == terms["buildCost"]
-    assert terms["buybackPrice"] == 0
     assert client.get(f"/campaigns/{slug}/position").json()["pendingRewards"] == 0
 
     res = client.post(f"/campaigns/{slug}/buy-shares", json={"amount": 1})
@@ -149,54 +148,6 @@ def test_ai_campaign_rejects_purchase_after_last_share():
     slug = "ai-support-copilot-rd-fund"
     assert client.post(f"/campaigns/{slug}/buy-shares", json={"amount": 50}).status_code == 200
     assert client.post(f"/campaigns/{slug}/buy-shares", json={"amount": 1}).status_code == 400
-
-
-def test_settlement_requires_sold_out():
-    res = client.post("/campaigns/friendly-citrus-orchard-transition/settle")
-    assert res.status_code == 400
-
-
-def test_full_investment_lifecycle_settle_buyback_claim():
-    slug = "ai-support-copilot-rd-fund"
-    # Set up the fully funded, first-year state explicitly for lifecycle coverage.
-    campaign = store.get_campaign_by_slug(slug)
-    campaign.investment.mintedShares = campaign.investment.totalShares
-    campaign.raisedAmount = campaign.goalAmount
-    campaign.investment.currentYear = 1
-    campaign.investment.cumulativePrincipal = 300_000
-    campaign.investment.remainingPrincipal = 1_300_000
-    campaign.investment.buybackPrice = 1_696_000
-    store.get_investor_position(campaign.id).pendingRewards = 7_500
-
-    before_position = client.get(f"/campaigns/{slug}/position").json()
-    assert before_position["pendingRewards"] == 7_500
-
-    settle = client.post(f"/campaigns/{slug}/settle")
-    assert settle.status_code == 200
-    after_settle = client.get(f"/campaigns/{slug}/position").json()
-    # investorIncome = 500_000 * 60% = 300_000; rewardPerShare = 300_000/200 = 1_500
-    # position holds 5 shares -> +7_500
-    assert after_settle["pendingRewards"] == 7_500 + 7_500
-
-    claim = client.post(f"/campaigns/{slug}/claim-reward")
-    assert claim.status_code == 200
-    assert claim.json()["amount"] == 15_000
-    after_claim = client.get(f"/campaigns/{slug}/position").json()
-    assert after_claim["pendingRewards"] == 0
-    assert after_claim["shareCount"] == 5  # buyback not active yet, shares untouched
-
-    buyback = client.post(f"/campaigns/{slug}/buyback")
-    assert buyback.status_code == 200
-    after_buyback = client.get(f"/campaigns/{slug}").json()
-    assert after_buyback["investment"]["buybackActive"] is True
-    assert after_buyback["investment"]["status"] == 2
-
-    claim_again = client.post(f"/campaigns/{slug}/claim-reward")
-    assert claim_again.status_code == 200
-    final_position = client.get(f"/campaigns/{slug}/position").json()
-    assert final_position["pendingRewards"] == 0
-    assert final_position["shareCount"] == 0  # returned to farmer after buyback claim
-    assert final_position["tokenIds"] == []
 
 
 def test_claim_reward_rejects_when_nothing_pending():
@@ -238,13 +189,4 @@ def test_create_campaign_rejects_short_story():
         "rewardTiers": [{"title": "a", "price": 1, "description": "b", "totalSupply": 1}],
     }
     res = client.post("/campaigns", json=payload)
-    assert res.status_code == 400
-
-
-def test_set_status_gates_buy_shares():
-    slug = "friendly-citrus-orchard-transition"
-    lock = client.post(f"/campaigns/{slug}/status", json={"status": 3})
-    assert lock.status_code == 200
-
-    res = client.post(f"/campaigns/{slug}/buy-shares", json={"amount": 1})
     assert res.status_code == 400

@@ -49,8 +49,6 @@ class InvestmentTerms(BaseModel):
     currentYear: int
     cumulativePrincipal: float
     remainingPrincipal: float
-    buybackActive: bool
-    buybackPrice: float
     holderCount: int
     tokenSymbol: str
 
@@ -126,10 +124,6 @@ class ConfigResponse(BaseModel):
     solanaTreasuryAddress: str
     solanaCluster: str
     lamportsPerShareUnit: int
-
-
-class SetStatusRequest(BaseModel):
-    status: ProjectStatus
 
 
 class RewardTierInput(BaseModel):

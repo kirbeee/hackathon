@@ -23,12 +23,6 @@ export function formatUSD(amountTWD: number): string {
   }).format(amountTWD / TWD_PER_USD);
 }
 
-/** @deprecated Use formatTWD, kept only for the currency symbol style. */
-export function formatCurrency(amount: number): string {
-  const twd = formatTWD(amount);
-  return `${twd}（≈ ${formatUSD(amount)}）`;
-}
-
 export function formatTWDT(amount: number): string {
   const twdt = `${new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 0 }).format(amount)} TWDT`;
   return `${twdt}（≈ ${formatUSD(amount)}）`;
@@ -39,11 +33,6 @@ export function formatCompactNumber(amount: number): string {
     notation: "compact",
     maximumFractionDigits: 1,
   }).format(amount);
-}
-
-/** Compact TWD amount with its unit and USD equivalent, e.g. "12.3萬 元（≈ USD 3,844）". */
-export function formatCompactCurrency(amount: number, unit: "元" | "TWDT" = "元"): string {
-  return `${formatCompactNumber(amount)} ${unit}（≈ ${formatUSD(amount)}）`;
 }
 
 export function progressPercent(raised: number, goal: number): number {

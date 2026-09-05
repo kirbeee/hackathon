@@ -1,17 +1,16 @@
-# fundraising-api
+# backend
 
-JSON API serving RWA campaign data to `fundraising-frontend` (Next.js) and the
-separate wallet-connect frontend. This is a mock data layer — a Python port of
-what used to live in `fundraising-frontend/lib/campaigns.ts` — it does not call
-the `contractTest` smart contracts or any wallet/chain. Investment-model
-campaigns mirror `contractTest/contracts/SafeHarvestNFT.sol`'s field shapes and
-state machine (buy shares → annual settlement → farmer buyback → claim), but
-mutations here only change this process's in-memory Python state.
+JSON API serving RWA campaign data to `frontend` (Next.js) and the separate
+wallet-connect frontend. This is a mock data layer — a Python port of what
+used to live in `frontend/lib/campaigns.ts` — it does not call the
+`contractTest` smart contracts or any wallet/chain. Investment-model
+campaigns mirror `contractTest/contracts/SafeHarvestNFT.sol`'s field shapes,
+but mutations here only change this process's in-memory Python state.
 
 ## Run it
 
 ```bash
-cd fundraising-api
+cd backend
 uv sync
 uv run uvicorn app.main:app --reload --port 8000
 ```
@@ -33,9 +32,6 @@ uv run pytest -q
 - `POST /campaigns/{slug}/donate` — back a reward tier: `{tierId, backerName, message}`
 - `POST /campaigns/{slug}/buy-shares` — buy investment shares: `{amount}`
 - `POST /campaigns/{slug}/claim-reward` — claim pending dividends
-- `POST /campaigns/{slug}/settle` — run annual settlement (demo admin action)
-- `POST /campaigns/{slug}/buyback` — farmer buys back all shares (demo admin action)
-- `POST /campaigns/{slug}/status` — set project status: `{status: 1|2|3}` (demo admin action)
 - `POST /campaigns` — create a new reward-tier campaign
 
 All state resets when the process restarts. CORS is wide open (`*`) for local

@@ -1,4 +1,4 @@
-"""FastAPI app serving RWA campaign data as JSON to the fundraising-frontend
+"""FastAPI app serving RWA campaign data as JSON to the frontend
 (Next.js) and the separate wallet-connect frontend.
 
 This is a mock data layer — see app/store.py. It does not call the
@@ -24,7 +24,6 @@ from app.models import (
     Donation,
     InvestorPosition,
     OnChainTransaction,
-    SetStatusRequest,
 )
 
 app = FastAPI(title="Fundraising API", version="0.1.0")
@@ -127,33 +126,6 @@ def claim_reward(slug: str) -> ActionResult:
     except store.ActionError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return ActionResult(message=f"已領取分紅 {amount:,.0f} TWDT。", amount=amount)
-
-
-@app.post("/campaigns/{slug}/settle", response_model=ActionResult)
-def settle(slug: str) -> ActionResult:
-    campaign = _require_campaign(slug)
-    try:
-        store.run_annual_settlement(campaign.id)
-    except store.ActionError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    return ActionResult(message="年度結算已完成，分紅已計入你的待領餘額。")
-
-
-@app.post("/campaigns/{slug}/buyback", response_model=ActionResult)
-def buyback(slug: str) -> ActionResult:
-    campaign = _require_campaign(slug)
-    try:
-        store.farmer_buy_back_all(campaign.id)
-    except store.ActionError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    return ActionResult(message="農夫已買回全部股份，買回款已計入你的待領餘額。")
-
-
-@app.post("/campaigns/{slug}/status", response_model=ActionResult)
-def set_status(slug: str, body: SetStatusRequest) -> ActionResult:
-    campaign = _require_campaign(slug)
-    store.set_investment_status(campaign.id, body.status)
-    return ActionResult(message="專案狀態已更新。")
 
 
 @app.post("/campaigns", response_model=Campaign)

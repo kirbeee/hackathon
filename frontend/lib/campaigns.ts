@@ -64,23 +64,11 @@ export async function buyShares(slug: string, amount: number): Promise<void> {
   await apiPost(`/campaigns/${encodeURIComponent(slug)}/buy-shares`, { amount });
 }
 
-export async function runAnnualSettlement(slug: string): Promise<void> {
-  await apiPost(`/campaigns/${encodeURIComponent(slug)}/settle`);
-}
-
-export async function farmerBuyBackAll(slug: string): Promise<void> {
-  await apiPost(`/campaigns/${encodeURIComponent(slug)}/buyback`);
-}
-
 export async function claimInvestmentReward(slug: string): Promise<number> {
   const result = await apiPost<{ message: string; amount: number | null }>(
     `/campaigns/${encodeURIComponent(slug)}/claim-reward`
   );
   return result.amount ?? 0;
-}
-
-export async function setInvestmentStatus(slug: string, status: ProjectStatus): Promise<void> {
-  await apiPost(`/campaigns/${encodeURIComponent(slug)}/status`, { status });
 }
 
 export async function createCampaign(input: {

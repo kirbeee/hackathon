@@ -8,13 +8,17 @@ The user talks to it like a chat assistant — stating budget, risk tolerance,
 preferred categories in plain language, over one or more messages — rather
 than filling in a fixed form. When it has enough to act, the agent:
 
-1. Lists open campaigns from `fundraising-api` (`get_rwa_assets`).
+1. Lists open campaigns from `backend` (`get_rwa_assets`).
 2. Scores each one's risk **deterministically** in Python, not via the LLM
-   (`get_risk_score` — see `app/risk.py`).
+   (`get_risk_score` — see `app/risk.py`). Every campaign carries a
+   `riskTier` (`degen` / `supporter` / `diversifier`, set by `backend`) that
+   fixes a score band; the agent narrates risk by that tier's Chinese label
+   first, and only uses the numeric score to compare campaigns within the
+   same tier.
 3. Checks its own Solana devnet wallet balance (`get_wallet_balance`).
 4. Decides what to buy, then actually pays for it: sends a real devnet SOL
    payment from its own keypair to the campaign treasury and records the
-   purchase via `fundraising-api` (`buy_rwa`).
+   purchase via `backend` (`buy_rwa`).
 
 The LLM (OpenAI, via standard Chat Completions tool-calling, `stream=True`)
 only plans and narrates; every number that matters (risk score, balance,
@@ -26,11 +30,11 @@ event pair around each tool the agent actually runs — so a UI can show "查
 
 ## Run it
 
-Needs `fundraising-api` running first (it's the data/action layer this agent
+Needs `backend` running first (it's the data/action layer this agent
 calls into):
 
 ```bash
-cd fundraising-api
+cd backend
 uv sync
 uv run uvicorn app.main:app --reload --port 8000
 ```
@@ -51,9 +55,9 @@ Env vars (`.env`, see `.env.example`):
 - `FUNDRAISING_API_URL` — defaults to `http://127.0.0.1:8000`.
 - `SOLANA_RPC_URL` — defaults to `https://api.devnet.solana.com`.
 
-Both `fundraising-api` and `rwa-agent` hold in-memory/on-disk state that
+Both `backend` and `rwa-agent` hold in-memory/on-disk state that
 doesn't survive a restart of either process independently — if you restart
-`fundraising-api` mid-demo, campaign data resets to seed data but the agent's
+`backend` mid-demo, campaign data resets to seed data but the agent's
 wallet keypair/balance are untouched (they live in `rwa-agent/.devnet-keys/`).
 
 ## Try it
@@ -75,7 +79,7 @@ curl -N -X POST http://127.0.0.1:8100/agent/chat \
 (`-N` disables curl's output buffering so you see events as they stream in,
 same as a browser's `EventSource` would.)
 
-Verified end-to-end against live `fundraising-api` data and the real OpenAI
+Verified end-to-end against live `backend` data and the real OpenAI
 API. The first response includes a `session_id` — pass it back on the next
 call's `session_id` field to continue the same conversation; the agent
 remembers earlier tool results (e.g. a risk score it already looked up)
@@ -90,7 +94,7 @@ data: {"type": "session", "session_id": "ddefa694-..."}
 data: {"type": "tool_call", "name": "get_rwa_assets", "arguments": {}}
 data: {"type": "tool_result", "name": "get_rwa_assets", "result": "[...]"}
 data: {"type": "tool_call", "name": "get_risk_score", "arguments": {"slug": "friendly-citrus-orchard-transition"}}
-data: {"type": "tool_result", "name": "get_risk_score", "result": "{\"score\": 24.0, \"level\": \"low\"}"}
+data: {"type": "tool_result", "name": "get_risk_score", "result": "{\"score\": 24.0, \"level\": \"low\", \"riskTier\": \"diversifier\", \"tierLabel\": \"The Diversifier\", \"tierDescription\": \"...\"}"}
 data: {"type": "tool_call", "name": "get_wallet_balance", "arguments": {}}
 data: {"type": "tool_result", "name": "get_wallet_balance", "result": "{\"lamports\": 0, \"sol\": 0.0}"}
 data: {"type": "delta", "content": "目前"}
@@ -134,7 +138,7 @@ teammate send SOL directly to the address from `GET /agent/status`.
   {"message": "...", "session_id": "optional, omit on the first message"}
   ```
   Conversation history is kept in memory per `session_id` (resets on
-  process restart, same tradeoff as `fundraising-api`'s store). Emits one
+  process restart, same tradeoff as `backend`'s store). Emits one
   SSE `data:` line per event:
   - `{"type": "session", "session_id": "..."}` — always first, echoes/assigns the id.
   - `{"type": "delta", "content": "..."}` — one streamed chunk of assistant text.
@@ -150,7 +154,7 @@ uv run pytest -q
 ```
 
 Only `app/risk.py`'s scoring formula is unit-tested; the OpenAI loop and
-Solana payments are exercised manually against live devnet + `fundraising-api`.
+Solana payments are exercised manually against live devnet + `backend`.
 
-Full request/response shapes for every endpoint here, `fundraising-api`, and
+Full request/response shapes for every endpoint here, `backend`, and
 the frontend's proxy route are in [`../API.md`](../API.md).

@@ -175,12 +175,6 @@ export function InvestmentPanel({
         <InfoRow label="專案狀態" value={STATUS_LABELS[investment.status]} />
       </div>
 
-      {investment.buybackActive && (
-        <p className="rounded-lg bg-brand-soft px-3 py-2 text-xs font-medium text-brand">
-          農夫已啟動買回，領取分紅後你持有的 RWA Token 將自動歸還給農夫。
-        </p>
-      )}
-
       <div className="rounded-lg border border-border p-4">
         <p className="text-sm font-semibold text-foreground">你的持股</p>
         <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-foreground/70">

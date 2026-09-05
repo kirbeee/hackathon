@@ -42,8 +42,6 @@ export interface InvestmentTerms {
   currentYear: number;
   cumulativePrincipal: number;
   remainingPrincipal: number;
-  buybackActive: boolean;
-  buybackPrice: number;
   holderCount: number;
   tokenSymbol: string;
 }
