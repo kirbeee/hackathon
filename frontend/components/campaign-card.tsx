@@ -5,12 +5,11 @@ import { CategoryPill } from "./category-pill";
 import {
   daysRemaining,
   formatCompactNumber,
-  formatCurrency,
-  formatTWDT,
   fundedPercent,
   progressPercent,
 } from "@/lib/format";
 import type { Campaign } from "@/lib/types";
+import { TWD_PER_USDC } from "@/lib/rwa-payment";
 
 export function CampaignCard({
   campaign,
@@ -83,8 +82,8 @@ export function CampaignCard({
         </p>
         <p className="text-xs text-foreground/50">
           {isInvestment
-            ? `每份 ${formatTWDT(campaign.investment!.sharePrice)}`
-            : `每單位 ${formatCurrency(startingPrice!)}`}
+            ? `每枚 ${campaign.investment!.sharePrice / TWD_PER_USDC} USDC`
+            : `每枚 ${startingPrice! / TWD_PER_USDC} USDC`}
         </p>
 
         <div className="mt-auto flex flex-col gap-2 pt-2">

@@ -59,6 +59,21 @@ def test_get_campaign_404_for_unknown_slug():
     assert res.status_code == 404
 
 
+def test_all_demo_tokens_cost_one_usdc_and_totals_match():
+    for campaign in client.get("/campaigns").json():
+        if campaign["investment"]:
+            terms = campaign["investment"]
+            assert terms["sharePrice"] == 30
+            assert campaign["raisedAmount"] == terms["mintedShares"] * 30
+            assert campaign["goalAmount"] == terms["totalShares"] * 30
+            assert terms["buildCost"] == campaign["goalAmount"]
+        else:
+            tiers = campaign["rewardTiers"]
+            assert all(tier["price"] == 30 for tier in tiers)
+            assert campaign["raisedAmount"] == sum(tier["claimed"] * 30 for tier in tiers)
+            assert campaign["goalAmount"] == sum(tier["totalSupply"] * 30 for tier in tiers)
+
+
 def test_get_campaign_detail_shape():
     res = client.get("/campaigns/friendly-citrus-orchard-transition")
     assert res.status_code == 200
@@ -76,7 +91,7 @@ def test_reward_tier_donate_flow():
     assert res.status_code == 200
 
     after = client.get(f"/campaigns/{slug}").json()
-    assert after["raisedAmount"] == before["raisedAmount"] + 880
+    assert after["raisedAmount"] == before["raisedAmount"] + 30
     assert after["backerCount"] == before["backerCount"] + 1
 
     donations = client.get(f"/campaigns/{slug}/donations").json()
@@ -111,7 +126,7 @@ def test_buy_shares_updates_position_and_raised_amount():
     assert len(set(position["tokenIds"])) == len(position["tokenIds"])  # no duplicate token ids
 
     after = client.get(f"/campaigns/{slug}").json()
-    assert after["raisedAmount"] == before["raisedAmount"] + 3 * 3_000
+    assert after["raisedAmount"] == before["raisedAmount"] + 3 * 30
 
 
 def test_ai_campaign_opens_for_purchase():
@@ -157,24 +172,23 @@ def test_full_investment_lifecycle_settle_buyback_claim():
     campaign.investment.mintedShares = campaign.investment.totalShares
     campaign.raisedAmount = campaign.goalAmount
     campaign.investment.currentYear = 1
-    campaign.investment.cumulativePrincipal = 300_000
-    campaign.investment.remainingPrincipal = 1_300_000
-    campaign.investment.buybackPrice = 1_696_000
-    store.get_investor_position(campaign.id).pendingRewards = 7_500
+    campaign.investment.cumulativePrincipal = 1_125
+    campaign.investment.remainingPrincipal = 4_875
+    campaign.investment.buybackPrice = 6_360
+    store.get_investor_position(campaign.id).pendingRewards = 28.125
 
     before_position = client.get(f"/campaigns/{slug}/position").json()
-    assert before_position["pendingRewards"] == 7_500
+    assert before_position["pendingRewards"] == 28.125
 
     settle = client.post(f"/campaigns/{slug}/settle")
     assert settle.status_code == 200
     after_settle = client.get(f"/campaigns/{slug}/position").json()
-    # investorIncome = 500_000 * 60% = 300_000; rewardPerShare = 300_000/200 = 1_500
-    # position holds 5 shares -> +7_500
-    assert after_settle["pendingRewards"] == 7_500 + 7_500
+    # investorIncome = 1_875 * 60% = 1_125; 5 of 200 shares earn 28.125 TWD.
+    assert after_settle["pendingRewards"] == 28.125 + 28.125
 
     claim = client.post(f"/campaigns/{slug}/claim-reward")
     assert claim.status_code == 200
-    assert claim.json()["amount"] == 15_000
+    assert claim.json()["amount"] == 56.25
     after_claim = client.get(f"/campaigns/{slug}/position").json()
     assert after_claim["pendingRewards"] == 0
     assert after_claim["shareCount"] == 5  # buyback not active yet, shares untouched

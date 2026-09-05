@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiPost } from "@/lib/api-client";
-import { formatCurrency } from "@/lib/format";
-import { LAMPORTS_PER_SHARE_UNIT } from "@/lib/solana";
-import { useTreasuryPayment } from "@/lib/use-treasury-payment";
+import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
+import { useClient } from "@solana/react";
+import type { AppClient } from "@/app/providers";
+import { sendTokenPayment } from "@/lib/token-payment";
+import { TWD_PER_USDC } from "@/lib/rwa-payment";
 import type { RewardTier } from "@/lib/types";
 
 interface SubmitState {
@@ -15,7 +17,8 @@ interface SubmitState {
 
 export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: RewardTier[] }) {
   const router = useRouter();
-  const { pay, connected } = useTreasuryPayment();
+  const client = useClient<AppClient>();
+  const connected = useConnectedWallet(client);
   const firstAvailable = rewardTiers.find((t) => t.claimed < t.totalSupply);
   const [selectedTierId, setSelectedTierId] = useState(firstAvailable?.id ?? "");
   const [backerName, setBackerName] = useState("");
@@ -25,12 +28,22 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedTierId) return;
+    const selectedTier = rewardTiers.find((tier) => tier.id === selectedTierId);
+    if (!selectedTier || selectedTier.claimed >= selectedTier.totalSupply) return;
+    if (!connected?.signer) {
+      setState({ status: "error", message: "請先連接 Phantom 錢包。" });
+      return;
+    }
 
     setPending(true);
     setState({ status: "idle" });
     try {
-      const signature = await pay(LAMPORTS_PER_SHARE_UNIT);
+      const signature = await sendTokenPayment({
+        client,
+        signer: connected.signer,
+        currency: "USDC",
+        amount: (selectedTier.price / TWD_PER_USDC).toFixed(6),
+      });
       await apiPost(`/campaigns/${slug}/donate`, {
         tierId: selectedTierId,
         backerName,
@@ -87,7 +100,7 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-semibold text-foreground">{t.title}</span>
                       <span className="whitespace-nowrap font-semibold text-brand-strong">
-                        {formatCurrency(t.price)}
+                        {t.price / TWD_PER_USDC} USDC / 枚
                       </span>
                     </div>
                     <p className="mt-0.5 text-xs text-foreground/60">{t.description}</p>
@@ -131,13 +144,13 @@ export function DonateForm({ slug, rewardTiers }: { slug: string; rewardTiers: R
       </div>
 
       <p className="text-xs text-foreground/50">
-        認購時會透過你連接的 Solana 錢包發送一筆 Devnet 測試轉帳（0.001 SOL）作為交易證明，
-        {connected ? "錢包已連接。" : "尚未連接錢包，送出時會請你先連接。"}
+        每次認購 1 枚 RWA Token，使用 Devnet USDC 付款。
+        {connected ? "錢包已連接。" : "請先連接錢包。"}
       </p>
 
       <button
         type="submit"
-        disabled={pending || !selectedTierId}
+        disabled={pending || !selectedTierId || !connected?.signer}
         className="rounded-full bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-accent-strong active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
       >
         {pending ? "認購處理中…" : "認購此債權單位"}

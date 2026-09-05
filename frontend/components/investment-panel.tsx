@@ -13,6 +13,7 @@ import type { AppClient } from "@/app/providers";
 import { STATUS_LABELS } from "@/lib/campaigns";
 import { formatTWDT } from "@/lib/format";
 import { sendTokenPayment } from "@/lib/token-payment";
+import { MAX_PAYMENT_TWD, RWA_PRICE_TWD, TWD_PER_USDC, rwaAmountForPayment } from "@/lib/rwa-payment";
 import type {
   InvestmentTerms,
   InvestorPosition,
@@ -20,21 +21,9 @@ import type {
 } from "@/lib/types";
 
 const initialState: InvestmentActionState = { status: "idle" };
-const TWD_PER_USDC = 30;
-const MAX_PAYMENT_TWD = 30_000;
-const PAYMENT_TOLERANCE_TWD = 0.001;
 
 function formatPaymentAmount(value: number): string {
   return value.toFixed(6).replace(/\.?0+$/, "");
-}
-
-function requiredPaymentAmount(
-  currency: PaymentCurrency,
-  shareAmount: number,
-  sharePriceTwd: number
-): string {
-  const totalTwd = shareAmount * sharePriceTwd;
-  return formatPaymentAmount(currency === "USDC" ? totalTwd / TWD_PER_USDC : totalTwd);
 }
 
 function ActionMessage({ state }: { state: InvestmentActionState }) {
@@ -70,10 +59,7 @@ export function InvestmentPanel({
     initialState
   );
   const [currency, setCurrency] = useState<PaymentCurrency>("USDC");
-  const [paymentAmount, setPaymentAmount] = useState(() =>
-    requiredPaymentAmount("USDC", 1, investment.sharePrice)
-  );
-  const [tokenPrice, setTokenPrice] = useState(String(investment.sharePrice));
+  const [paymentAmount, setPaymentAmount] = useState("1");
   const [backendEndpoint, setBackendEndpoint] = useState("");
   const [buyState, setBuyState] = useState<InvestmentActionState>(initialState);
   const [buyPending, setBuyPending] = useState(false);
@@ -82,12 +68,8 @@ export function InvestmentPanel({
   const numericPaymentAmount = Number(paymentAmount);
   const paymentTwdEquivalent =
     currency === "USDC" ? numericPaymentAmount * TWD_PER_USDC : numericPaymentAmount;
-  const numericTokenPrice = Number(tokenPrice);
-  const numericRwaTokenAmount = Math.floor(paymentTwdEquivalent / numericTokenPrice);
-  const rwaTokenAmount =
-    Number.isFinite(numericRwaTokenAmount) && numericRwaTokenAmount > 0
-      ? formatPaymentAmount(numericRwaTokenAmount)
-      : "";
+  const numericRwaTokenAmount = rwaAmountForPayment(numericPaymentAmount, currency);
+  const rwaTokenAmount = numericRwaTokenAmount === null ? "" : String(numericRwaTokenAmount);
 
   async function handlePurchase(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -95,18 +77,21 @@ export function InvestmentPanel({
       setBuyState({ status: "error", message: "請先連接 Phantom 錢包。" });
       return;
     }
-    if (!Number.isFinite(numericTokenPrice) || numericTokenPrice <= 0) {
-      setBuyState({ status: "error", message: "請輸入有效的 RWA Token 價格。" });
+    if (investment.status !== 1 || soldOut) {
+      setBuyState({ status: "error", message: "此專案目前未開放認購。" });
+      return;
+    }
+    if (investment.sharePrice !== RWA_PRICE_TWD) {
+      setBuyState({ status: "error", message: "專案價格尚未更新，請重新啟動後端並重新整理頁面。" });
       return;
     }
     if (
-      !Number.isFinite(numericRwaTokenAmount) ||
-      numericRwaTokenAmount < 1 ||
+      numericRwaTokenAmount === null ||
       numericRwaTokenAmount > remaining
     ) {
       setBuyState({
         status: "error",
-        message: `換算後的 RWA Token 數量必須介於 1 和 ${remaining} 之間。`,
+        message: `1 USDC = 1 枚 RWA，請以整枚認購，最多 ${Math.min(remaining, MAX_PAYMENT_TWD / RWA_PRICE_TWD)} 枚。`,
       });
       return;
     }
@@ -114,7 +99,7 @@ export function InvestmentPanel({
       setBuyState({ status: "error", message: "請輸入有效的付款金額。" });
       return;
     }
-    if (paymentTwdEquivalent > MAX_PAYMENT_TWD + PAYMENT_TOLERANCE_TWD) {
+    if (paymentTwdEquivalent > MAX_PAYMENT_TWD) {
       setBuyState({ status: "error", message: "單筆付款不得超過 NT$30,000 等值 Token。" });
       return;
     }
@@ -165,7 +150,7 @@ export function InvestmentPanel({
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        <InfoRow label="每份價格" value={formatTWDT(investment.sharePrice)} />
+        <InfoRow label="每份價格" value="1 USDC（30 TWD）" />
         <InfoRow label="已售出" value={`${investment.mintedShares} / ${investment.totalShares} 份`} />
         <InfoRow label="建設成本" value={formatTWDT(investment.buildCost)} />
         <InfoRow label="年收益" value={formatTWDT(investment.annualIncome)} />
@@ -206,7 +191,7 @@ export function InvestmentPanel({
 
       <form onSubmit={handlePurchase} className="flex flex-col gap-3 border-t border-border pt-4">
         <label htmlFor="paymentAmount" className="text-sm font-medium text-foreground/70">
-          購買 RWA Token（{formatTWDT(investment.sharePrice)} / 份，剩 {remaining} 份）
+          購買 RWA Token（1 USDC / 枚，最低 1 枚，剩 {remaining} 枚）
         </label>
         <div>
           <label htmlFor="backendEndpoint" className="mb-1 block text-xs text-foreground/50">
@@ -258,8 +243,9 @@ export function InvestmentPanel({
             <input
               id="paymentAmount"
               type="number"
-              min="0.000001"
-              step="0.000001"
+              min={currency === "USDC" ? 1 : RWA_PRICE_TWD}
+              step={currency === "USDC" ? 1 : RWA_PRICE_TWD}
+              max={Math.min(remaining, MAX_PAYMENT_TWD / RWA_PRICE_TWD) * (currency === "USDC" ? 1 : RWA_PRICE_TWD)}
               inputMode="decimal"
               value={paymentAmount}
               onChange={(event) => setPaymentAmount(event.target.value)}
@@ -268,20 +254,6 @@ export function InvestmentPanel({
             />
             <span className="w-16 text-xs font-semibold text-foreground/60">{currency}</span>
           </div>
-
-          <label htmlFor="tokenPrice" className="self-center text-xs text-foreground/50">
-            Token 價格（TWD）
-          </label>
-          <input
-            id="tokenPrice"
-            type="number"
-            min="0.000001"
-            step="0.000001"
-            value={tokenPrice}
-            onChange={(event) => setTokenPrice(event.target.value)}
-            disabled={buyPending}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
-          />
 
           <label htmlFor="rwaTokenAmount" className="self-center text-xs text-foreground/50">
             RWA Token 數量
@@ -295,7 +267,7 @@ export function InvestmentPanel({
           />
         </div>
         <p className="rounded-lg bg-surface-muted px-3 py-2 text-xs text-foreground/60">
-          本次付款等值 NT${Number.isFinite(paymentTwdEquivalent) ? paymentTwdEquivalent.toLocaleString("zh-TW") : "—"}
+          1 USDC = 1 枚 RWA。本次付款等值 NT${Number.isFinite(paymentTwdEquivalent) ? paymentTwdEquivalent.toLocaleString("zh-TW") : "—"}
           ，換算 {rwaTokenAmount || "—"} 枚 RWA Token，單筆上限 NT$30,000
           {currency === "USDC" ? "（1 USDC = 30 TWD）" : ""}
         </p>
@@ -306,7 +278,7 @@ export function InvestmentPanel({
               buyPending ||
               soldOut ||
               !rwaTokenAmount ||
-              numericRwaTokenAmount < 1 ||
+              numericRwaTokenAmount === null ||
               numericRwaTokenAmount > remaining ||
               paymentTwdEquivalent > MAX_PAYMENT_TWD ||
               investment.status !== 1 ||

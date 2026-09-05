@@ -35,6 +35,8 @@ SOLANA_CLUSTER = os.environ.get("SOLANA_CLUSTER", "devnet")
 # TWDT-denominated price — this is a stand-in payment amount, not a real
 # TWDT/SOL conversion.
 LAMPORTS_PER_SHARE_UNIT = 1_000_000
+# Shared demo denomination: 1 USDC = 30 TWD = 1 RWA token.
+DEMO_RWA_PRICE_TWD = 30
 
 onchain_transactions: list[OnChainTransaction] = []
 _next_tx_seq = 1
@@ -94,13 +96,22 @@ def _seed_campaign(
     funding_model = "investment" if investment else "reward"
 
     if investment:
+        scale = DEMO_RWA_PRICE_TWD / investment.sharePrice
+        investment.sharePrice = DEMO_RWA_PRICE_TWD
+        investment.buildCost *= scale
+        investment.annualIncome *= scale
+        investment.cumulativePrincipal *= scale
+        investment.remainingPrincipal *= scale
+        investment.buybackPrice *= scale
         raised = investment.mintedShares * investment.sharePrice
         backers = investment.holderCount
         goal = investment.totalShares * investment.sharePrice
     else:
+        for tier in tiers:
+            tier.price = DEMO_RWA_PRICE_TWD
         raised = _sum_tiers(tiers)
         backers = _sum_backers(tiers)
-        goal = goalAmount or 0
+        goal = sum(t.price * t.totalSupply for t in tiers)
 
     campaigns.append(
         Campaign(

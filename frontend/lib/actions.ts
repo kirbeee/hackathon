@@ -11,6 +11,7 @@ import {
   setInvestmentStatus,
 } from "./campaigns";
 import { ApiError } from "./api-client";
+import { rwaAmountForPayment } from "./rwa-payment";
 import type { CampaignCategory, PaymentCurrency, ProjectStatus } from "./types";
 
 export interface CampaignFormState {
@@ -194,6 +195,10 @@ export async function completePaidSharePurchaseAction(input: {
   }
   if (!/^\d+(?:\.\d+)?$/.test(input.paymentAmount) || Number(input.paymentAmount) <= 0) {
     return { status: "error", message: "請輸入有效的付款金額。" };
+  }
+  const expectedShares = rwaAmountForPayment(Number(input.paymentAmount), input.currency);
+  if (expectedShares === null || shareAmount !== expectedShares || Number(input.rwaTokenAmount) !== expectedShares) {
+    return { status: "error", message: "付款金額與 RWA 數量不符：1 USDC = 1 枚 RWA，最低認購 1 枚。" };
   }
   if (!input.projectName.trim() || !input.walletAddress.trim()) {
     return { status: "error", message: "專案名稱或付款錢包地址缺失。" };
