@@ -65,6 +65,21 @@ def test_get_campaign_404_for_unknown_slug():
     assert res.status_code == 404
 
 
+def test_all_demo_tokens_cost_one_usdc_and_totals_match():
+    for campaign in client.get("/campaigns").json():
+        if campaign["investment"]:
+            terms = campaign["investment"]
+            assert terms["sharePrice"] == 30
+            assert campaign["raisedAmount"] == terms["mintedShares"] * 30
+            assert campaign["goalAmount"] == terms["totalShares"] * 30
+            assert terms["buildCost"] == campaign["goalAmount"]
+        else:
+            tiers = campaign["rewardTiers"]
+            assert all(tier["price"] == 30 for tier in tiers)
+            assert campaign["raisedAmount"] == sum(tier["claimed"] * 30 for tier in tiers)
+            assert campaign["goalAmount"] == sum(tier["totalSupply"] * 30 for tier in tiers)
+
+
 def test_get_campaign_detail_shape():
     res = client.get("/campaigns/friendly-citrus-orchard-transition")
     assert res.status_code == 200
@@ -82,7 +97,7 @@ def test_reward_tier_donate_flow():
     assert res.status_code == 200
 
     after = client.get(f"/campaigns/{slug}").json()
-    assert after["raisedAmount"] == before["raisedAmount"] + 880
+    assert after["raisedAmount"] == before["raisedAmount"] + 30
     assert after["backerCount"] == before["backerCount"] + 1
 
     donations = client.get(f"/campaigns/{slug}/donations").json()
@@ -117,7 +132,7 @@ def test_buy_shares_updates_position_and_raised_amount():
     assert len(set(position["tokenIds"])) == len(position["tokenIds"])  # no duplicate token ids
 
     after = client.get(f"/campaigns/{slug}").json()
-    assert after["raisedAmount"] == before["raisedAmount"] + 3 * 3_000
+    assert after["raisedAmount"] == before["raisedAmount"] + 3 * 30
 
 
 def test_ai_campaign_opens_for_purchase():

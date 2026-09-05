@@ -5,6 +5,7 @@ import { ProgressBar } from "./progress-bar";
 import { CategoryPill } from "./category-pill";
 import { daysRemaining, fundedPercent, progressPercent } from "@/lib/format";
 import type { Campaign } from "@/lib/types";
+import { TWD_PER_USDC } from "@/lib/rwa-payment";
 
 export function CampaignCard({
   campaign,
@@ -76,8 +77,9 @@ export function CampaignCard({
           {featured ? campaign.story : campaign.summary}
         </p>
         <p className="text-xs text-foreground/50">
-          {isInvestment ? "每份 " : "每單位 "}
-          <Amount amountTWD={isInvestment ? campaign.investment!.sharePrice : startingPrice!} />
+          {isInvestment
+            ? `每枚 ${campaign.investment!.sharePrice / TWD_PER_USDC} USDC`
+            : `每枚 ${startingPrice! / TWD_PER_USDC} USDC`}
         </p>
 
         <div className="mt-auto flex flex-col gap-2 pt-2">
