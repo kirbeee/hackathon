@@ -34,9 +34,28 @@ def receive_payment():
 
     if not rwa_token_amount.is_finite() or rwa_token_amount <= 0:
         return jsonify({"ok": False, "error": "rwaTokenAmount must be greater than 0."}), 400
+    # TODO: refactor the code below
+    mint_address = "E4SEuuUG1bEoKKtW9qtAvRyhE4nWiLCEUQugnpGNPWav"
+    try:
+        result = subprocess.run(
+            [
+                "spl-token",
+                "transfer",
+                mint_address,
+                str(rwa_token_amount),
+                wallet_address,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            "ok": False,
+            "error": "Token transfer failed.",
+            "details": e.stderr.strip(),
+        }), 500
 
-    # Demo acknowledgement only. The actual RWA Token transfer must be added
-    # after the mint, signing authority, and chain integration are defined.
     return jsonify(
         {
             "ok": True,
