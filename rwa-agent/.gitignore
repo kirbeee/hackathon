@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Devnet-only demo keypair — never commit private keys, even play-money ones.
+.devnet-keys/
