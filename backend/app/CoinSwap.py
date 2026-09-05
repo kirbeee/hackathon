@@ -1,7 +1,7 @@
 """Minimal Flask endpoint for the frontend RWA Token purchase demo."""
 
 from __future__ import annotations
-
+import subprocess
 import os
 from decimal import Decimal, InvalidOperation
 from flask import Flask, jsonify, request
@@ -70,6 +70,6 @@ def receive_payment():
 if __name__ == "__main__":
     app.run(
         host=os.getenv("COIN_SWAP_HOST", "127.0.0.1"),
-        port=int(os.getenv("COIN_SWAP_PORT", "8000")),
+        port=int(os.getenv("COIN_SWAP_PORT", "8001")),
         debug=os.getenv("COIN_SWAP_DEBUG", "false").lower() == "true",
     )
