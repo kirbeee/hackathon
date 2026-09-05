@@ -6,3 +6,5 @@ __pycache__/
 
 # Devnet-only demo keypair — never commit private keys, even play-money ones.
 .devnet-keys/
+
+.env
