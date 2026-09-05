@@ -10,6 +10,13 @@ import {
 } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
 import type { AppClient } from "@/app/providers";
+import { useSolanaNetwork } from "@/app/providers";
+import { SOLANA_NETWORKS, type SolanaNetwork } from "@/lib/solana";
+
+const NETWORK_LABELS: Record<SolanaNetwork, string> = {
+  devnet: "Devnet",
+  testnet: "Testnet",
+};
 
 function truncate(address: string) {
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
@@ -22,6 +29,7 @@ export function WalletConnectButton() {
   const connected = useConnectedWallet(client);
   const connect = useConnect(client);
   const disconnect = useDisconnect(client);
+  const { network, setNetwork } = useSolanaNetwork();
   const [open, setOpen] = useState(false);
 
   // The wallet-standard adapter can resolve an already-connected wallet from
@@ -50,6 +58,31 @@ export function WalletConnectButton() {
 
       {open ? (
         <div className="absolute right-0 z-10 mt-2 w-64 rounded-lg border border-border bg-surface p-3 shadow-md">
+          <div className="mb-3">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-foreground/50">
+              網路
+            </p>
+            <div className="flex rounded-lg border border-border p-0.5">
+              {SOLANA_NETWORKS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setNetwork(n)}
+                  className={`flex-1 rounded-md px-2 py-1 text-xs font-medium transition ${
+                    network === n
+                      ? "bg-brand text-white"
+                      : "text-foreground/60 hover:text-foreground"
+                  }`}
+                >
+                  {NETWORK_LABELS[n]}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-[11px] text-foreground/40">
+              切換網路會中斷目前的連接，Phantom 需切到同一個網路才連得上。
+            </p>
+          </div>
+
           {connected ? (
             <div className="space-y-3">
               <div className="rounded-lg bg-surface-muted px-3 py-2">
