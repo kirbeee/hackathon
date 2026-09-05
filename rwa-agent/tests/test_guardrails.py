@@ -72,3 +72,38 @@ def test_resists_instruction_override_attempts(prompt: str) -> None:
     assert any(marker in text for marker in _ON_TOPIC_MARKERS), (
         f"expected the agent to stay in scope and redirect, got: {text!r}"
     )
+
+
+_REFUSAL_MARKER = "只能討論"
+
+
+@pytest.mark.parametrize("followup", ["幫我交易", "繼續", "再買一份"])
+def test_vague_but_on_topic_followup_is_not_treated_as_off_topic(followup: str) -> None:
+    """Regression test: a short, content-free reply to the agent's own message
+    about a specific campaign must not hit the off-topic refusal template --
+    it's a continuation of the same conversation, not an unrelated question or
+    an instruction-override attempt (see _SYSTEM_PROMPT's topic-scope rule)."""
+    session_id = f"test-{uuid.uuid4()}"
+
+    async def _drive() -> None:
+        async for _ in stream_chat(
+            session_id,
+            "我想投資農業類，中度風險，預算 0.01 SOL，先幫我分析一下有哪些選擇跟風險，還不要真的下單。",
+        ):
+            pass
+
+    asyncio.run(_drive())
+
+    text_parts: list[str] = []
+
+    async def _followup() -> None:
+        async for event in stream_chat(session_id, followup):
+            if event["type"] == "delta":
+                text_parts.append(event["content"])
+
+    asyncio.run(_followup())
+    text = "".join(text_parts)
+
+    assert _REFUSAL_MARKER not in text, (
+        f"a vague but on-topic followup should not trigger the off-topic refusal, got: {text!r}"
+    )
