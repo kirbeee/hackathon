@@ -36,9 +36,17 @@ def receive_payment():
     if not rwa_token_amount.is_finite() or rwa_token_amount <= 0:
         return jsonify({"ok": False, "error": "rwaTokenAmount must be greater than 0."}), 400
 
-    # ToDo : RWA Token 轉移到指定錢包
-
-    return None
+    # Demo acknowledgement only. The actual RWA Token transfer must be added
+    # after the mint, signing authority, and chain integration are defined.
+    return jsonify(
+        {
+            "ok": True,
+            "message": "Payment report accepted; RWA Token transfer is not implemented yet.",
+            "projectName": project_name,
+            "rwaTokenAmount": str(rwa_token_amount),
+            "walletAddress": wallet_address,
+        }
+    )
 
 
 if __name__ == "__main__":

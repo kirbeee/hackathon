@@ -5,6 +5,7 @@ description = "JSON API serving RWA campaign data to the fundraising-frontend an
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",
+    "flask>=3.1",
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
 ]
