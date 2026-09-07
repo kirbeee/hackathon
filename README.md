@@ -2,7 +2,7 @@
 
 > **AI Agent × RWA × Blockchain**
 
-![alt text](images\專案封面.png)
+![alt text](./images/專案封面.png)
 
 ---
 
@@ -12,7 +12,7 @@
 
 📄 **[點此查看我們的專案簡報（PDF）](./專案簡報.pdf)**
 
-![alt text](images\專案highlight.png)
+![alt text](./images/專案highlight.png)
 
 ---
 
