@@ -1,9 +1,8 @@
 # RWA × AI Agent 智能投資募資平台
 
 > **AI Agent × RWA × Blockchain**
-> **Tokenize the value. Automate the investment.**
 
-![alt text](專案封面.png)
+![alt text](images\專案封面.png)
 
 ---
 
@@ -12,6 +11,8 @@
 本專案是一個結合 **Real World Assets（RWA）、區塊鏈與 AI Agent** 的新型募資與投資平台。
 
 📄 **[點此查看我們的專案簡報（PDF）](./專案簡報.pdf)**
+
+![alt text](images\專案highlight.png)
 
 ---
 
