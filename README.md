@@ -10,7 +10,9 @@
 
 本專案是一個結合 **Real World Assets（RWA）、區塊鏈與 AI Agent** 的新型募資與投資平台。
 
-📄 **[點此查看我們的專案簡報（PDF）](./專案簡報.pdf)**
+<h1 align="center" style="font-size: 60px;">
+  <a href="./專案簡報.pdf">📄 點此查看我們的專案簡報（PDF）</a>
+</h1>
 
 ![alt text](./images/專案highlight.png)
 
