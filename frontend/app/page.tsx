@@ -31,21 +31,25 @@ const TRUST_LOGOS = [
 const TECH_VALUE_STATS = [
   {
     label: "最低參與門檻",
+    headline: "門檻降低 99%+",
     before: "傳統私募依規僅限專業投資人，門檻常在新台幣 300 萬元以上",
     after: "RWA Token 化後最低 3,000 元即可參與，降低超過 99%",
   },
   {
     label: "撥款與結算速度",
+    headline: "3–5 天 → 數秒",
     before: "傳統私募配息／贖回需經銀行匯款與人工對帳，通常 3–5 個工作天",
     after: "鏈上分潤與買回撥付在數秒內完成，交易即時可查證",
   },
   {
     label: "跨境參與成本",
+    headline: "3–5% → <NT$0.01",
     before: "傳統跨境電匯手續費通常 3–5%，另計中間行費用",
     after: "Solana 鏈上單筆手續費低於 NT$0.01（Devnet 示範，主網同樣是次分錢等級）",
   },
   {
     label: "資金流向透明度",
+    headline: "全程公開可查",
     before: "傳統私募的資金運用與撥款紀錄通常僅發行方與受託銀行掌握",
     after: "每筆認購、分潤、買回皆有鏈上交易紀錄，任何人可在 Explorer 公開查證",
   },
@@ -92,6 +96,31 @@ const AI_AGENT_FEATURES = [
       "根據歷史殖利率、投資人分潤與風險狀況，建議下一個值得關注的 RWA 專案。",
   },
 ];
+
+function ArrowIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={className}>
+      <circle cx="12" cy="12" r="9" strokeOpacity={0.25} />
+      <path d="M8 12.5l2.5 2.5L16 9.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 const HERO_FADE_CLASS = "opacity-0";
 
@@ -261,16 +290,29 @@ export default async function HomePage() {
             className="mt-8 grid gap-4 sm:grid-cols-2"
           >
             {TECH_VALUE_STATS.map((stat) => (
-              <div key={stat.label} className="rounded-lg border border-border p-5">
-                <p className="text-sm font-semibold text-foreground">{stat.label}</p>
-                <p className="mt-3 text-xs text-foreground/50">
-                  <span className="font-medium text-foreground/70">傳統模式：</span>
-                  {stat.before}
-                </p>
-                <p className="mt-2 text-xs text-brand-strong">
-                  <span className="font-medium">RWA Token 化：</span>
-                  {stat.after}
-                </p>
+              <div key={stat.label} className="overflow-hidden rounded-lg border border-border">
+                <div className="flex items-center justify-between gap-3 border-b border-border bg-surface-muted px-5 py-3">
+                  <p className="text-sm font-semibold text-foreground">{stat.label}</p>
+                  <span className="whitespace-nowrap rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-strong">
+                    {stat.headline}
+                  </span>
+                </div>
+                <div className="grid sm:grid-cols-[1fr_auto_1fr]">
+                  <div className="p-5">
+                    <p className="text-xs font-medium text-foreground/50">傳統模式</p>
+                    <p className="mt-1.5 text-xs leading-relaxed text-foreground/60">{stat.before}</p>
+                  </div>
+                  <div
+                    aria-hidden="true"
+                    className="hidden items-center justify-center px-1 text-foreground/25 sm:flex"
+                  >
+                    <ArrowIcon className="h-4 w-4" />
+                  </div>
+                  <div className="border-t border-border bg-brand-soft/50 p-5 sm:border-l sm:border-t-0">
+                    <p className="text-xs font-medium text-brand-strong">RWA Token 化</p>
+                    <p className="mt-1.5 text-xs leading-relaxed text-foreground/70">{stat.after}</p>
+                  </div>
+                </div>
               </div>
             ))}
           </Reveal>
@@ -289,12 +331,27 @@ export default async function HomePage() {
             delay={100}
             className="mt-8 grid gap-6 sm:grid-cols-3"
           >
-            {TRUST_CARDS.map((card) => (
-              <div key={card.title} className="rounded-lg border border-border bg-surface p-5">
-                <h3 className="font-display font-semibold text-foreground">{card.title}</h3>
-                <ul className="mt-3 flex flex-col gap-2 text-xs leading-relaxed text-foreground/60">
+            {TRUST_CARDS.map((card, i) => (
+              <div
+                key={card.title}
+                className="relative overflow-hidden rounded-lg border border-border bg-surface p-5 pt-4"
+              >
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand to-accent"
+                />
+                <div className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-sm font-semibold text-brand-strong">
+                    0{i + 1}
+                  </span>
+                  <h3 className="font-display font-semibold text-foreground">{card.title}</h3>
+                </div>
+                <ul className="mt-4 flex flex-col gap-3 text-xs leading-relaxed text-foreground/60">
                   {card.points.map((point) => (
-                    <li key={point}>{point}</li>
+                    <li key={point} className="flex gap-2">
+                      <CheckIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand" />
+                      <span>{point}</span>
+                    </li>
                   ))}
                 </ul>
               </div>
