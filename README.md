@@ -1,32 +1,20 @@
 # RWA × AI Agent 智能投資募資平台
 
 > **AI Agent × RWA × Blockchain**
->
-> 讓創意被資產化，讓投資被自動化。
+
+![alt text](./images/專案封面.png)
+
+---
 
 # 1. 專案簡介
 
-本專案是一個結合 **Real World Assets（RWA）、區塊鏈智能合約與 AI Agent** 的新型募資與投資平台。
+本專案是一個結合 **Real World Assets（RWA）、區塊鏈與 AI Agent** 的新型募資與投資平台。
 
-我們希望解決傳統募資與投資市場中兩個核心問題：
+<h1 align="center" style="font-size: 60px;">
+  <a href="./專案簡報.pdf">📄 點此查看我們的專案簡報（PDF）</a>
+</h1>
 
-1. **有好的創意／專案，卻缺乏資金**
-2. **一般投資人想參與投資，但缺乏專業分析與持續管理能力**
-
-因此，我們建立一個 RWA 募資平台，將實體資產、專案價值或未來可兌現的資產，以 Token 的形式映射到區塊鏈上。
-
-投資人可以透過錢包參與投資，而 AI Agent 則扮演「**基金經理人**」的角色：
-
-* 分析 RWA Token 的投資價值
-* 蒐集市場與專案相關資訊
-* 評估投資風險
-* 根據投資人的風險偏好制定策略
-* 自動執行 RWA Token 的買入、持有與賣出
-* 持續監控市場與專案狀態
-
-最終希望建立一個：
-
-> **「募資者可以快速取得資金、一般投資人可以低門檻參與、AI Agent 可以自動管理投資」的 RWA 生態系。**
+![alt text](./images/專案highlight.png)
 
 ---
 
@@ -124,7 +112,7 @@ Tokenization
 
 ### ③ 區塊鏈提供可程式化的交易機制
 
-RWA Token 可以透過智能合約建立：
+RWA Token 可以在鏈上完成：
 
 * 發行
 * 持有
@@ -136,7 +124,7 @@ RWA Token 可以透過智能合約建立：
 
 等機制。
 
-這也是我們將 **AI Agent + Smart Contract** 結合的原因。
+這也是我們將 **AI Agent + Blockchain** 結合的原因。
 
 ---
 
@@ -185,7 +173,7 @@ RWA Token 可以透過智能合約建立：
    ↓
 投資人購買 Token
    ↓
-智能合約管理資金
+平台管理資金池
 ```
 
 即使最後專案沒有成功，Token 背後仍可能存在具有市場價值的實體資產。
@@ -200,7 +188,7 @@ RWA Token 可以透過智能合約建立：
 
 AI Agent 不只是聊天機器人，而是能夠：
 
-> **感知 → 分析 → 制定策略 → 執行 → 監控 → 再決策**
+> **感知 → 分析 → 制定策略 → 執行**
 
 的 Agent。
 
@@ -224,13 +212,8 @@ AI Agent 不只是聊天機器人，而是能夠：
              │ 策略制定     │
              └──────┬───────┘
                     │
-          ┌─────────┴─────────┐
-          ▼                   ▼
-      買入 RWA             賣出 RWA
-          │                   │
-          └─────────┬─────────┘
                     ▼
-              Smart Contract
+                 買入 RWA
                     │
                     ▼
                  Wallet
@@ -293,96 +276,12 @@ AI 分析
  ↓
 產生交易策略
  ↓
-Smart Contract
- ↓
 Wallet
  ↓
 執行交易
 ```
 
 使用者不需要每一次都手動操作。這邊可以具備安全性
-
----
-
-# 7. AI Agent 情境範例
-
-假設使用者持有：
-
-> 「半導體設備 RWA Token」
-
-AI Agent 持續監控相關資訊。
-
-某一天，Agent 發現：
-
-```text
-① 公司 CEO 更換
-② 半導體研究計畫延期
-③ 新聞出現負面消息
-④ 設備估值下降
-⑤ Token 市場價格快速下跌
-```
-
-AI Agent 綜合分析後判斷：
-
-> 該專案未來風險提高，已超過使用者設定的風險承受範圍。
-
-因此：
-
-```text
-Risk Score ↑
-      ↓
-觸發 Sell Strategy
-      ↓
-Smart Contract
-      ↓
-自動賣出
-```
-
-這就是我們所謂的：
-
-> **AI Agent Fund Manager**
-
----
-
-# 8. Smart Contract
-
-智能合約負責處理 RWA Token 與資金的核心邏輯。
-
-初期 Demo 可以先部署在 **Private Chain / Demo Chain**。
-
----
-
-## 8.1 核心功能
-
-### Token Management
-
-* RWA Token 發行
-* Token 持有
-* Token 轉移
-* Token 贖回
-
-### Investment
-
-* 投資人投入資金
-* 資金池管理
-* 投資額分配
-
-### Automated Distribution
-
-例如：
-
-```text
-Funding Pool
-     │
-     ▼
-Smart Contract
-     │
-     ├── Investor A → USDC
-     ├── Investor B → USDC
-     └── Investor C → USDC
-```
-ToDo : 智能合約這一塊要驗證
-智能合約可以根據 RWA Token 的持有比例或指定條件，自動進行資金分配。
 
 ---
 
@@ -400,9 +299,6 @@ Web Frontend
 AI Agent
  │
  ▼
-Smart Contract
- │
- ▼
 Wallet
  │
  ▼
@@ -415,23 +311,21 @@ Wallet 可以作為使用者：
 * 資產持有工具
 * 交易工具
 
-並透過智能合約完成交易。
+並直接在鏈上完成交易。
 
 ---
 
-# 10. MCP × AI Agent
+# 10. AI Agent Tool Calling
 
-為了讓 AI Agent 能夠實際操作區塊鏈與錢包，我們預計將 AI Agent 與 MCP / Tool Calling 機制整合。
+為了讓 AI Agent 能夠實際操作區塊鏈與錢包，我們透過 OpenAI Tool Calling 機制，讓 Agent 呼叫後端與鏈上功能。
 
-例如 Agent 可以使用：
+目前 Agent 可以使用：
 
 ```text
 get_rwa_assets()
-get_market_data()
 get_wallet_balance()
 get_risk_score()
 buy_rwa()
-sell_rwa()
 ```
 
 讓 LLM 不只是「回答投資建議」，而是能夠真正執行可控的金融操作。
@@ -451,7 +345,7 @@ sell_rwa()
 例如：
 
 ```text
-投資金額：10,000 USDC
+投資金額：10,000 SOL
 
 風險偏好：中度
 
@@ -510,28 +404,7 @@ Risk: High
 
 ## Step 5 — 執行交易
 
-使用者確認策略後，Agent 呼叫智能合約執行交易。
-
----
-
-## Step 6 — 持續監控
-
-Agent 持續監控：
-
-```text
-Market
-Company
-Asset
-News
-Token Price
-Risk
-```
-
-如果風險條件改變，重新評估是否：
-
-* Buy
-* Hold
-* Sell
+使用者確認策略後，Agent 透過錢包執行鏈上交易。
 
 ---
 
@@ -586,45 +459,9 @@ Automated Investment
 
 > **AI 能不能被允許無限制地交易？**
 
-因此我們會將 AI Agent 與資金權限分離。
+因此我們規劃將 AI Agent 與資金權限分離，讓 Agent 在「**可控範圍內自動化**」。
 
-例如：
-
-```text
-AI Agent
-   │
-   ├── Read Permission
-   │     ├── Market Data
-   │     ├── RWA Data
-   │     └── Risk Data
-   │
-   └── Trade Permission
-         │
-         ├── Daily Limit
-         ├── Single Transaction Limit
-         ├── Asset Whitelist
-         └── Risk Threshold
-```
-
-AI Agent 不應該擁有無限制的資金權限。
-
----
-
-## 安全機制
-
-預計加入：
-
-* 單筆交易上限
-* 每日交易上限
-* Token Whitelist
-* 最大持倉比例
-* 最大可接受損失
-* 使用者人工確認
-* Smart Contract Permission
-* Wallet Permission
-* Emergency Stop
-
-讓 Agent 在「**可控範圍內自動化**」。
+> 目前尚未實作，屬於後續規劃項目。
 
 ---
 
@@ -651,8 +488,6 @@ AI Agent 不應該擁有無限制的資金權限。
        └────────┼────────┘
                 ▼
             Blockchain
-                │
-          Smart Contract
                 │
                 ▼
             AI Agent
@@ -708,11 +543,6 @@ AI Agent 不應該擁有無限制的資金權限。
               │         │         │
               └─────────┼─────────┘
                         ▼
-                 ┌─────────────┐
-                 │Smart Contract│
-                 └──────┬──────┘
-                        │
-                        ▼
                     Wallet
                         │
                         ▼
@@ -731,7 +561,7 @@ AI Agent 不應該擁有無限制的資金權限。
 
 ```text
 Funding Target
-$1,000,000 USDC
+$1,000,000（等值 SOL）
 ```
 
 平台將其資產與專案價值 Tokenization。
@@ -744,7 +574,7 @@ $1,000,000 USDC
 
 輸入：
 
-> 「我有 10,000 USDC，希望中度風險投資科技類 RWA。」
+> 「我有 10,000 SOL，希望中度風險投資科技類 RWA。」
 
 AI Agent 開始分析。
 
@@ -772,37 +602,6 @@ Agent 自動配置資金。
 
 ---
 
-## Scene 4 — 市場變化
-
-Agent 發現：
-
-> 半導體專案出現重大負面消息。
-
-重新計算 Risk Score。
-
-```text
-Risk Score
-45 → 78
-```
-
-超過使用者設定的風險門檻。
-
----
-
-## Scene 5 — 自動賣出
-
-Agent 觸發：
-
-```text
-SELL RWA B
-```
-
-Smart Contract 執行交易。
-
-投資組合自動重新配置。
-
----
-
 # 20. 技術 Stack
 
 初期 Demo 預計使用：
@@ -816,19 +615,18 @@ Smart Contract 執行交易。
 
 * LLM
 * AI Agent
-* MCP / Tool Calling
+* OpenAI Tool Calling
 * External Information Retrieval
 
 ### Blockchain
 
-* EVM-compatible Demo / Private Chain
-* Solidity
-* Smart Contract
+* Demo / Private Chain
+* On-chain Token Transfer
 
 ### Assets
 
 * RWA Token
-* USDC Mock Token
+* SOL（Solana Devnet）
 
 ### Backend
 
@@ -844,9 +642,9 @@ Smart Contract 執行交易。
 | ------ | -------------------------------- |
 | LT     | 使用者需求、提案、方向                      |
 | Gimi   | RWA 應用、競品、募資情境                   |
-| Sean   | Smart Contract、Private Chain     |
+| Sean   | Private Chain                     |
 | Ying   | RWA、使用者情境                        |
-| Amelie | AI Agent、Smart Contract、Frontend |
+| Amelie | AI Agent、Frontend                 |
 | Alex   | 技術方向、資金經理人 Agent、數據與安全性          |
 | 全員     | 商業模式、Demo、簡報                     |
 
@@ -883,7 +681,6 @@ Smart Contract 執行交易。
 研究：
 
 * AI Agent Wallet Security
-* Smart Contract Security
 * Agent Permission
 * Transaction Limit
 * Custody
@@ -896,7 +693,7 @@ Smart Contract 執行交易。
 
 本專案目前為 Hackathon / Proof of Concept。
 
-Demo 中使用的 RWA Token、USDC、資產價格及交易皆為測試或模擬用途，不代表實際投資商品，也不構成任何投資建議。
+Demo 中使用的 RWA Token、SOL、資產價格及交易皆為測試或模擬用途，不代表實際投資商品，也不構成任何投資建議。
 
 實際上線仍需要進一步處理：
 
@@ -905,7 +702,6 @@ Demo 中使用的 RWA Token、USDC、資產價格及交易皆為測試或模擬�
 * KYC / AML
 * 資產託管
 * RWA 資產驗證
-* 智能合約安全
 * AI 決策風險
 * 使用者資產安全
 
@@ -921,9 +717,6 @@ Demo 中使用的 RWA Token、USDC、資產價格及交易皆為測試或模擬�
 * Hackathon Track
   https://hackathon.com.tw/tracks/w4VERnRA0NQD3MiJfWnt
 
-* Smart Contract Demo
-  https://github.com/alex124513/contractTest
-
 * RWA / Blockchain Reference
   https://github.com/hugebing/blygccrryryy
 
@@ -932,8 +725,6 @@ Demo 中使用的 RWA Token、USDC、資產價格及交易皆為測試或模擬�
 ## TL;DR
 
 **RWA** 負責把現實世界的資產與專案價值帶到區塊鏈。
-
-**Smart Contract** 負責資產、資金與交易規則。
 
 **AI Agent** 則成為投資人的「基金經理人」，負責分析資訊、評估風險、管理投資組合，並在使用者授權的範圍內自動執行交易。
 
@@ -954,7 +745,6 @@ Demo 中使用的 RWA Token、USDC、資產價格及交易皆為測試或模擬�
         │               │
         │ Analyze       │
         │ Decide        │
-        │ Monitor       │
         │ Execute       │
         └───────┬───────┘
                 │
