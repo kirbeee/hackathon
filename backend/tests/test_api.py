@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app import store
+from app import chain_verify, store, treasury_wallet
 from app.main import app
 
 client = TestClient(app)
@@ -11,6 +11,34 @@ client = TestClient(app)
 def reset_store():
     store.reset_for_tests()
     yield
+
+
+@pytest.fixture(autouse=True)
+def fake_chain_verify(monkeypatch):
+    """buy-shares/donate/deposit verify a claimed txSignature really moved
+    the money on-chain -- stub that out by default so tests can use
+    made-up signatures like the rest of this offline suite does, same
+    reasoning as fake_treasury_payment. Tests that care about rejection
+    override this with monkeypatch themselves."""
+
+    async def _fake_verify(signature: str, from_address: str, min_lamports: int) -> None:
+        return None
+
+    monkeypatch.setattr(chain_verify, "verify_spent_at_least", _fake_verify)
+
+
+@pytest.fixture
+def fake_treasury_payment(monkeypatch):
+    """Sell/redeem sends a real treasury-signed devnet refund -- stub it out
+    so these tests stay offline, same as buy/donate never touching Solana."""
+    calls: list[tuple[str, int]] = []
+
+    async def _fake_send_payment(to_address: str, lamports: int) -> str:
+        calls.append((to_address, lamports))
+        return f"fake-refund-sig-{len(calls)}"
+
+    monkeypatch.setattr(treasury_wallet, "send_payment", _fake_send_payment)
+    return calls
 
 
 def test_config_exposes_treasury_address():
@@ -80,6 +108,9 @@ def test_wallet_history_collects_donations_and_investments_across_campaigns():
         "walletAddress": "never-used-address",
         "donations": [],
         "investments": [],
+        "redemptions": [],
+        "deposits": [],
+        "availableLamports": 0,
     }
 
 
@@ -159,6 +190,67 @@ def test_donate_rejects_investment_campaign():
     assert res.status_code == 400
 
 
+def test_buy_shares_rejects_unverifiable_signature(monkeypatch):
+    async def _fail_verify(signature, from_address, min_lamports):
+        raise chain_verify.TransferVerificationError("找不到這筆交易")
+
+    monkeypatch.setattr(chain_verify, "verify_spent_at_least", _fail_verify)
+
+    slug = "friendly-citrus-orchard-transition"
+    wallet = "UnverifiedWalletCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+    res = client.post(
+        f"/campaigns/{slug}/buy-shares",
+        json={"amount": 1, "txSignature": "fake-sig", "walletAddress": wallet},
+    )
+    assert res.status_code == 400
+    assert client.get(f"/wallets/{wallet}/history").json()["investments"] == []
+
+
+def test_buy_shares_without_wallet_address_skips_verification(monkeypatch):
+    """A signature paired with no walletAddress can never be redeemed (see
+    get_wallet_shares_held), so there's nothing worth verifying -- and the
+    existing demo-position flow (no wallet at all) must keep working."""
+
+    def _boom(*_args, **_kwargs):
+        raise AssertionError("must not attempt verification with no walletAddress")
+
+    monkeypatch.setattr(chain_verify, "verify_spent_at_least", _boom)
+
+    res = client.post(
+        "/campaigns/friendly-citrus-orchard-transition/buy-shares",
+        json={"amount": 1, "txSignature": "sig-no-wallet"},
+    )
+    assert res.status_code == 200
+
+
+def test_same_tx_signature_cannot_back_two_purchases():
+    slug = "friendly-citrus-orchard-transition"
+    wallet = "ReplayWalletDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"
+    body = {"amount": 1, "txSignature": "sig-replay-1", "walletAddress": wallet}
+
+    first = client.post(f"/campaigns/{slug}/buy-shares", json=body)
+    assert first.status_code == 200
+
+    second = client.post(f"/campaigns/{slug}/buy-shares", json=body)
+    assert second.status_code == 400
+
+    held_shares = client.get(f"/wallets/{wallet}/history").json()["investments"]
+    assert len(held_shares) == 1
+
+
+def test_sell_rejects_donation_that_was_never_signature_backed(fake_treasury_payment):
+    """A donation recorded with no txSignature (or no walletAddress) must
+    never be redeemable for a real refund -- see preview_redeem_donation."""
+    slug = "artisan-mid-autumn-mooncake-box"
+    wallet = "NoProofWalletEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
+
+    client.post(f"/campaigns/{slug}/donate", json={"tierId": "t1", "walletAddress": wallet})
+
+    res = client.post(f"/campaigns/{slug}/sell", json={"tierId": "t1", "walletAddress": wallet})
+    assert res.status_code == 400
+    assert not fake_treasury_payment
+
+
 def test_buy_shares_updates_position_and_raised_amount():
     slug = "friendly-citrus-orchard-transition"
     before = client.get(f"/campaigns/{slug}").json()
@@ -229,6 +321,226 @@ def test_create_campaign_gets_unique_id_and_slug():
     all_ids = [c["id"] for c in client.get("/campaigns").json()]
     assert len(all_ids) == len(set(all_ids)), "campaign ids must be unique"
     assert created["id"] not in {"c1", "c2", "c3", "c4", "c5", "c6", "c7"}
+
+
+def test_sell_shares_refunds_and_updates_position(fake_treasury_payment):
+    slug = "friendly-citrus-orchard-transition"
+    wallet = "SellerWallet1111111111111111111111111111"
+
+    client.post(
+        f"/campaigns/{slug}/buy-shares",
+        json={
+            "amount": 3,
+            "txSignature": "sig-buy-1",
+            "amountLamports": 3_000_000,
+            "walletAddress": wallet,
+        },
+    )
+    before = client.get(f"/campaigns/{slug}").json()
+    position_before = client.get(f"/campaigns/{slug}/position").json()
+
+    res = client.post(f"/campaigns/{slug}/sell", json={"amount": 2, "walletAddress": wallet})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["amountLamports"] == 2 * store.LAMPORTS_PER_SHARE_UNIT
+    assert body["txSignature"]
+    assert fake_treasury_payment == [(wallet, 2 * store.LAMPORTS_PER_SHARE_UNIT)]
+
+    after = client.get(f"/campaigns/{slug}").json()
+    assert after["investment"]["mintedShares"] == before["investment"]["mintedShares"] - 2
+    assert after["raisedAmount"] == before["raisedAmount"] - 2 * before["investment"]["sharePrice"]
+
+    position_after = client.get(f"/campaigns/{slug}/position").json()
+    assert position_after["shareCount"] == position_before["shareCount"] - 2
+
+    history = client.get(f"/wallets/{wallet}/history").json()
+    assert len(history["redemptions"]) == 1
+    assert history["redemptions"][0]["shares"] == 2
+    assert history["redemptions"][0]["campaignSlug"] == slug
+
+
+def test_sell_shares_rejects_selling_more_than_wallet_holds(fake_treasury_payment):
+    slug = "friendly-citrus-orchard-transition"
+    wallet = "SellerWallet2222222222222222222222222222"
+
+    client.post(
+        f"/campaigns/{slug}/buy-shares",
+        json={"amount": 1, "txSignature": "sig-buy-2", "walletAddress": wallet},
+    )
+    res = client.post(f"/campaigns/{slug}/sell", json={"amount": 2, "walletAddress": wallet})
+    assert res.status_code == 400
+    assert not fake_treasury_payment, "should never touch the treasury for a rejected sell"
+
+
+def test_sell_shares_rejects_wallet_with_no_holdings(fake_treasury_payment):
+    slug = "friendly-citrus-orchard-transition"
+    res = client.post(
+        f"/campaigns/{slug}/sell",
+        json={"amount": 1, "walletAddress": "NeverBoughtAnything333333333333333333333"},
+    )
+    assert res.status_code == 400
+    assert not fake_treasury_payment
+
+
+def test_sell_reward_tier_cancels_pledge_and_refunds(fake_treasury_payment):
+    slug = "artisan-mid-autumn-mooncake-box"
+    wallet = "RewardSellerWallet44444444444444444444444"
+
+    client.post(
+        f"/campaigns/{slug}/donate",
+        json={"tierId": "t1", "txSignature": "sig-donate-3", "walletAddress": wallet},
+    )
+    before = client.get(f"/campaigns/{slug}").json()
+
+    res = client.post(f"/campaigns/{slug}/sell", json={"tierId": "t1", "walletAddress": wallet})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["amountLamports"] == store.LAMPORTS_PER_SHARE_UNIT
+    assert fake_treasury_payment == [(wallet, store.LAMPORTS_PER_SHARE_UNIT)]
+
+    after = client.get(f"/campaigns/{slug}").json()
+    tier_before = next(t for t in before["rewardTiers"] if t["id"] == "t1")
+    tier_after = next(t for t in after["rewardTiers"] if t["id"] == "t1")
+    assert tier_after["claimed"] == tier_before["claimed"] - 1
+    assert after["raisedAmount"] == before["raisedAmount"] - tier_before["price"]
+    assert after["backerCount"] == before["backerCount"] - 1
+
+    # Same wallet can't redeem the same pledge twice.
+    res_again = client.post(f"/campaigns/{slug}/sell", json={"tierId": "t1", "walletAddress": wallet})
+    assert res_again.status_code == 400
+
+
+def test_sell_surfaces_treasury_payment_failure_without_mutating_state(monkeypatch):
+    slug = "friendly-citrus-orchard-transition"
+    wallet = "SellerWallet5555555555555555555555555555"
+    client.post(
+        f"/campaigns/{slug}/buy-shares",
+        json={"amount": 1, "txSignature": "sig-buy-5", "walletAddress": wallet},
+    )
+    before = client.get(f"/campaigns/{slug}").json()
+
+    async def _fail(to_address: str, lamports: int) -> str:
+        raise treasury_wallet.InsufficientTreasuryFundsError("treasury is dry")
+
+    monkeypatch.setattr(treasury_wallet, "send_payment", _fail)
+
+    res = client.post(f"/campaigns/{slug}/sell", json={"amount": 1, "walletAddress": wallet})
+    assert res.status_code == 502
+
+    after = client.get(f"/campaigns/{slug}").json()
+    assert after["investment"]["mintedShares"] == before["investment"]["mintedShares"]
+
+
+def test_deposit_credits_ledger_balance():
+    wallet = "DepositorWallet6666666666666666666666666"
+
+    res = client.post(f"/wallets/{wallet}/deposit", json={"amountLamports": 5_000_000, "txSignature": "sig-dep-1"})
+    assert res.status_code == 200
+    assert res.json()["availableLamports"] == 5_000_000
+
+    res2 = client.post(f"/wallets/{wallet}/deposit", json={"amountLamports": 1_000_000, "txSignature": "sig-dep-2"})
+    assert res2.json()["availableLamports"] == 6_000_000
+
+    balance = client.get(f"/wallets/{wallet}/balance").json()
+    assert balance == {"walletAddress": wallet, "availableLamports": 6_000_000}
+
+    history = client.get(f"/wallets/{wallet}/history").json()
+    assert history["availableLamports"] == 6_000_000
+    assert len(history["deposits"]) == 2
+    assert {d["txSignature"] for d in history["deposits"]} == {"sig-dep-1", "sig-dep-2"}
+
+
+def test_deposit_rejects_non_positive_amount():
+    res = client.post(
+        "/wallets/SomeWallet7777777777777777777777777777/deposit",
+        json={"amountLamports": 0, "txSignature": "sig-dep-x"},
+    )
+    assert res.status_code == 400
+
+
+def test_via_ledger_buy_shares_debits_balance_and_attributes_holding():
+    slug = "friendly-citrus-orchard-transition"
+    wallet = "LedgerBuyerWallet888888888888888888888888"
+    client.post(f"/wallets/{wallet}/deposit", json={"amountLamports": 3_000_000, "txSignature": "sig-dep-3"})
+
+    res = client.post(
+        f"/campaigns/{slug}/buy-shares",
+        json={
+            "amount": 2,
+            "txSignature": "sig-agent-buy-1",
+            "amountLamports": 2_000_000,
+            "walletAddress": wallet,
+            "viaLedger": True,
+        },
+    )
+    assert res.status_code == 200
+
+    balance = client.get(f"/wallets/{wallet}/balance").json()
+    assert balance["availableLamports"] == 1_000_000  # 3M deposited - 2M spent
+
+    history = client.get(f"/wallets/{wallet}/history").json()
+    assert len(history["investments"]) == 1
+    assert history["investments"][0]["shares"] == 2
+
+
+def test_via_ledger_buy_shares_rejects_insufficient_balance():
+    slug = "friendly-citrus-orchard-transition"
+    wallet = "PoorLedgerWallet99999999999999999999999999"
+    client.post(f"/wallets/{wallet}/deposit", json={"amountLamports": 500_000, "txSignature": "sig-dep-4"})
+
+    res = client.post(
+        f"/campaigns/{slug}/buy-shares",
+        json={
+            "amount": 1,
+            "txSignature": "sig-agent-buy-2",
+            "amountLamports": 1_000_000,
+            "walletAddress": wallet,
+            "viaLedger": True,
+        },
+    )
+    assert res.status_code == 400
+    assert client.get(f"/wallets/{wallet}/balance").json()["availableLamports"] == 500_000
+
+
+def test_via_ledger_donate_debits_fixed_unit_price():
+    slug = "artisan-mid-autumn-mooncake-box"
+    wallet = "LedgerDonorWalletAAAAAAAAAAAAAAAAAAAAAAAAA"
+    client.post(f"/wallets/{wallet}/deposit", json={"amountLamports": 1_000_000, "txSignature": "sig-dep-5"})
+
+    res = client.post(
+        f"/campaigns/{slug}/donate",
+        json={"tierId": "t1", "txSignature": "sig-agent-donate-1", "walletAddress": wallet, "viaLedger": True},
+    )
+    assert res.status_code == 200
+    assert client.get(f"/wallets/{wallet}/balance").json()["availableLamports"] == 0
+
+
+def test_via_ledger_sell_credits_balance_without_treasury_payment(fake_treasury_payment):
+    slug = "friendly-citrus-orchard-transition"
+    wallet = "LedgerSellerWalletBBBBBBBBBBBBBBBBBBBBBBBB"
+    client.post(f"/wallets/{wallet}/deposit", json={"amountLamports": 3_000_000, "txSignature": "sig-dep-6"})
+    client.post(
+        f"/campaigns/{slug}/buy-shares",
+        json={
+            "amount": 2,
+            "txSignature": "sig-agent-buy-3",
+            "amountLamports": 2_000_000,
+            "walletAddress": wallet,
+            "viaLedger": True,
+        },
+    )
+
+    res = client.post(
+        f"/campaigns/{slug}/sell", json={"amount": 1, "walletAddress": wallet, "viaLedger": True}
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["txSignature"] is None
+    assert body["amountLamports"] == store.LAMPORTS_PER_SHARE_UNIT
+    assert not fake_treasury_payment, "a viaLedger sell must never touch the treasury wallet"
+
+    balance = client.get(f"/wallets/{wallet}/balance").json()
+    assert balance["availableLamports"] == 1_000_000 + store.LAMPORTS_PER_SHARE_UNIT
 
 
 def test_create_campaign_rejects_short_story():

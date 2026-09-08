@@ -18,6 +18,8 @@ from app.models import (
     Donation,
     InvestmentTerms,
     InvestorPosition,
+    OnChainDeposit,
+    OnChainRedemption,
     OnChainTransaction,
     RewardTier,
     RewardTierInput,
@@ -39,7 +41,19 @@ LAMPORTS_PER_SHARE_UNIT = 1_000_000
 DEMO_RWA_PRICE_TWD = 30
 
 onchain_transactions: list[OnChainTransaction] = []
+redemptions: list[OnChainRedemption] = []
+deposits: list[OnChainDeposit] = []
+# Custodial ledger: cash a wallet has deposited into the AI agent's pooled
+# wallet but not yet spent -- see the "custodial ledger" section below.
+wallet_ledger_balances: dict[str, int] = {}
+# A verified txSignature can only ever back one buy/donate/deposit record --
+# without this, the same real payment could be replayed into unlimited
+# recorded purchases/deposits. See claim_tx_signature() and
+# app/chain_verify.py.
+_used_tx_signatures: set[str] = set()
 _next_tx_seq = 1
+_next_redemption_seq = 1
+_next_deposit_seq = 1
 
 
 def _days(n: float) -> str:
@@ -56,6 +70,16 @@ class CampaignNotFoundError(Exception):
 
 class ActionError(Exception):
     """A user-facing validation/state error (mirrors the TS Error(message) pattern)."""
+
+
+def claim_tx_signature(tx_signature: str) -> None:
+    """Marks a verified txSignature as spent so it can't back more than one
+    buy/donate/deposit record. Call this only after app.chain_verify has
+    confirmed the signature is a real, sufficient on-chain payment -- this
+    function itself only guards against replaying the same real payment."""
+    if tx_signature in _used_tx_signatures:
+        raise ActionError("這筆交易簽章已經被使用過，無法重複認列。")
+    _used_tx_signatures.add(tx_signature)
 
 
 campaigns: list[Campaign] = []
@@ -498,6 +522,10 @@ def reset_for_tests() -> None:
     donations.clear()
     investor_positions.clear()
     onchain_transactions.clear()
+    redemptions.clear()
+    deposits.clear()
+    wallet_ledger_balances.clear()
+    _used_tx_signatures.clear()
     _seed()
 
 
@@ -556,6 +584,7 @@ def add_donation(
     message: str,
     tx_signature: Optional[str] = None,
     wallet_address: Optional[str] = None,
+    via_ledger: bool = False,
 ) -> Donation:
     global _next_donation_seq
     campaign = next((c for c in campaigns if c.id == campaign_id), None)
@@ -569,6 +598,19 @@ def add_donation(
         raise ActionError("Reward tier not found")
     if tier.claimed >= tier.totalSupply:
         raise ActionError("此債權方案的 RWA Token 已認購完畢")
+
+    if via_ledger:
+        if not wallet_address:
+            raise ActionError("透過帳本認購需要提供 walletAddress")
+        debit_ledger(wallet_address, LAMPORTS_PER_SHARE_UNIT)
+
+    # Only a wallet+signature pair that's already been verified on-chain (by
+    # the caller, in app/main.py, before reaching here) can ever be redeemed
+    # later -- see preview_redeem_donation's `redeemable` filter. Claiming it
+    # here (rather than in the caller) keeps the check-and-record atomic:
+    # nothing else awaits between this and the donation being appended below.
+    if tx_signature and wallet_address:
+        claim_tx_signature(tx_signature)
 
     donation = Donation(
         id=f"d{_next_donation_seq}",
@@ -600,6 +642,7 @@ def buy_shares(
     tx_signature: Optional[str] = None,
     amount_lamports: Optional[int] = None,
     wallet_address: Optional[str] = None,
+    via_ledger: bool = False,
 ) -> None:
     global _next_tx_seq
     campaign = _get_investment_campaign(campaign_id)
@@ -610,6 +653,11 @@ def buy_shares(
         raise ActionError("專案目前非正常運作狀態，無法購買")
     if terms.mintedShares + amount > terms.totalShares:
         raise ActionError("超過剩餘可售股份數量")
+
+    if via_ledger:
+        if not wallet_address:
+            raise ActionError("透過帳本購買需要提供 walletAddress")
+        debit_ledger(wallet_address, amount_lamports or amount * LAMPORTS_PER_SHARE_UNIT)
 
     position = _ensure_position(campaign_id)
     was_new_holder = position.shareCount == 0
@@ -625,6 +673,12 @@ def buy_shares(
         campaign.backerCount += 1
 
     if tx_signature:
+        # Only a signature the caller has already verified on-chain (see
+        # app/main.py) may back a record that get_wallet_shares_held (and
+        # therefore a later sell payout) will ever count -- claiming it here
+        # keeps that check-and-record atomic, same reasoning as add_donation.
+        if wallet_address:
+            claim_tx_signature(tx_signature)
         onchain_transactions.append(
             OnChainTransaction(
                 id=f"tx{_next_tx_seq}",
@@ -639,8 +693,197 @@ def buy_shares(
         _next_tx_seq += 1
 
 
-def get_wallet_history(wallet_address: str) -> tuple[list[Donation], list[OnChainTransaction]]:
-    """All donations/investment purchases a wallet address paid for, newest first."""
+# ---- custodial ledger --------------------------------------------------------
+#
+# The AI agent trades out of its own devnet wallet on behalf of whoever it's
+# acting for, instead of each user signing their own on-chain payment -- so
+# there has to be an off-chain record of how much of that pooled wallet's SOL
+# actually belongs to which user. A wallet deposits real devnet SOL into the
+# agent's wallet (record_deposit), the agent can only spend up to that
+# wallet's balance on its behalf (debit_ledger, called from buy_shares/
+# add_donation when via_ledger=True), and a viaLedger sell/redeem credits the
+# refund straight back to the ledger (credit_ledger) instead of sending a
+# real on-chain payment, since the cash never left the pool to begin with.
+# There is no withdrawal endpoint yet -- ledger cash can only become a real
+# payment again by buying something you can later sell.
+
+
+def get_ledger_balance(wallet_address: str) -> int:
+    return wallet_ledger_balances.get(wallet_address, 0)
+
+
+def record_deposit(wallet_address: str, amount_lamports: int, tx_signature: str) -> int:
+    """Credits wallet_address's ledger balance, returning the new total. The
+    caller (app/main.py) must have already verified tx_signature on-chain --
+    claiming it here (rather than there) keeps the check-and-credit atomic."""
+    global _next_deposit_seq
+    claim_tx_signature(tx_signature)
+    wallet_ledger_balances[wallet_address] = (
+        wallet_ledger_balances.get(wallet_address, 0) + amount_lamports
+    )
+    deposits.append(
+        OnChainDeposit(
+            id=f"dep{_next_deposit_seq}",
+            walletAddress=wallet_address,
+            amountLamports=amount_lamports,
+            txSignature=tx_signature,
+            createdAt=datetime.now(timezone.utc).isoformat(),
+        )
+    )
+    _next_deposit_seq += 1
+    return wallet_ledger_balances[wallet_address]
+
+
+def debit_ledger(wallet_address: str, amount_lamports: int) -> None:
+    balance = wallet_ledger_balances.get(wallet_address, 0)
+    if balance < amount_lamports:
+        raise ActionError(
+            f"這個錢包的可投資餘額只有 {balance} lamports，不足支付 {amount_lamports} lamports，請先儲值。"
+        )
+    wallet_ledger_balances[wallet_address] = balance - amount_lamports
+
+
+def credit_ledger(wallet_address: str, amount_lamports: int) -> None:
+    wallet_ledger_balances[wallet_address] = (
+        wallet_ledger_balances.get(wallet_address, 0) + amount_lamports
+    )
+
+
+# ---- sell / redeem -----------------------------------------------------------
+#
+# There's no secondary market here (no live price feed) -- "selling" means
+# redeeming back to the issuer at the same demo unit price it was bought at,
+# refunded as a real devnet SOL payment from the treasury wallet. Each is
+# split into a read-only `preview_*` (validate + compute the refund, safe to
+# call before the on-chain payment is attempted) and an `apply_*` (mutate
+# state, only called once that payment has actually gone through) so a
+# failed treasury payment never leaves campaign state out of sync with what
+# was actually paid out.
+
+
+def preview_sell_shares(campaign_id: str, amount: int, wallet_address: str) -> int:
+    """Validate a shares sell and return the lamports it should refund."""
+    _get_investment_campaign(campaign_id)
+    if amount <= 0:
+        raise ActionError("賣出份數需大於 0")
+
+    held = get_wallet_shares_held(campaign_id, wallet_address)
+    if amount > held:
+        raise ActionError(f"這個錢包在此專案僅持有 {held} 份，無法賣出 {amount} 份")
+
+    # get_wallet_shares_held is a per-wallet ledger; the shared demo position
+    # apply_sell_shares actually mutates is not wallet-scoped (see buy_shares)
+    # and could in principle hold fewer shares than any one wallet's slice of
+    # it. Validate against it here too, so a shortfall is a rejected sell
+    # (nothing paid out, nothing mutated) rather than apply_sell_shares
+    # silently paying out more than it actually removes from campaign state.
+    position = _ensure_position(campaign_id)
+    if amount > position.shareCount:
+        raise ActionError(f"專案目前部位僅剩 {position.shareCount} 份，無法賣出 {amount} 份")
+
+    return amount * LAMPORTS_PER_SHARE_UNIT
+
+
+def apply_sell_shares(campaign_id: str, amount: int) -> None:
+    """Mutate campaign/position state for a shares sell already paid out.
+    Callers must go through preview_sell_shares first, which guarantees
+    amount <= position.shareCount."""
+    campaign = _get_investment_campaign(campaign_id)
+    terms = campaign.investment
+    assert terms is not None
+
+    position = _ensure_position(campaign_id)
+    assert amount <= position.shareCount, "preview_sell_shares should have rejected this already"
+
+    for _ in range(amount):
+        if position.tokenIds:
+            position.tokenIds.pop()
+    position.shareCount -= amount
+    terms.mintedShares = max(terms.mintedShares - amount, 0)
+    campaign.raisedAmount -= amount * terms.sharePrice
+
+    if position.shareCount == 0 and terms.holderCount > 0:
+        terms.holderCount -= 1
+        campaign.backerCount = max(campaign.backerCount - 1, 0)
+
+
+def preview_redeem_donation(
+    campaign_id: str, tier_id: str, wallet_address: str
+) -> tuple[Donation, int]:
+    """Validate a reward-tier redemption and return (the donation to redeem,
+    lamports it should refund)."""
+    campaign = next((c for c in campaigns if c.id == campaign_id), None)
+    if not campaign:
+        raise CampaignNotFoundError(campaign_id)
+    if campaign.fundingModel != "reward":
+        raise ActionError("這個專案是投資型，請用份數賣出而不是方案 tierId")
+
+    tier = next((t for t in campaign.rewardTiers if t.id == tier_id), None)
+    if not tier:
+        raise ActionError("找不到這個方案")
+
+    donation = next(
+        (
+            d
+            for d in donations
+            if d.campaignId == campaign_id
+            and d.tierId == tier_id
+            and d.walletAddress == wallet_address
+            and not d.redeemed
+            # Only a donation whose txSignature was verified on-chain (see
+            # add_donation/app/chain_verify.py) can be redeemed for a real
+            # refund -- otherwise anyone could donate with no signature at
+            # all and redeem it for free money.
+            and d.txSignature is not None
+        ),
+        None,
+    )
+    if not donation:
+        raise ActionError("這個錢包在此方案沒有可退回的認購紀錄")
+
+    return donation, LAMPORTS_PER_SHARE_UNIT
+
+
+def apply_redeem_donation(donation: Donation, campaign_id: str, tier_id: str) -> None:
+    """Mutate donation/tier/campaign state for a redemption already paid out."""
+    donation.redeemed = True
+    campaign = next(c for c in campaigns if c.id == campaign_id)
+    tier = next(t for t in campaign.rewardTiers if t.id == tier_id)
+
+    tier.claimed = max(tier.claimed - 1, 0)
+    campaign.raisedAmount -= tier.price
+    campaign.backerCount = max(campaign.backerCount - 1, 0)
+
+
+def record_redemption(
+    campaign_id: str,
+    amount_lamports: int,
+    shares: int,
+    tier_id: Optional[str],
+    tx_signature: Optional[str],
+    wallet_address: str,
+) -> None:
+    global _next_redemption_seq
+    redemptions.append(
+        OnChainRedemption(
+            id=f"rd{_next_redemption_seq}",
+            campaignId=campaign_id,
+            amountLamports=amount_lamports,
+            shares=shares,
+            tierId=tier_id,
+            txSignature=tx_signature,
+            createdAt=datetime.now(timezone.utc).isoformat(),
+            walletAddress=wallet_address,
+        )
+    )
+    _next_redemption_seq += 1
+
+
+def get_wallet_history(
+    wallet_address: str,
+) -> tuple[list[Donation], list[OnChainTransaction], list[OnChainRedemption], list[OnChainDeposit]]:
+    """All donations/investment purchases/redemptions/deposits a wallet address
+    paid for, was refunded to, or topped up, newest first."""
     matched_donations = sorted(
         (d for d in donations if d.walletAddress == wallet_address),
         key=lambda d: d.createdAt,
@@ -651,7 +894,34 @@ def get_wallet_history(wallet_address: str) -> tuple[list[Donation], list[OnChai
         key=lambda t: t.createdAt,
         reverse=True,
     )
-    return matched_donations, matched_transactions
+    matched_redemptions = sorted(
+        (r for r in redemptions if r.walletAddress == wallet_address),
+        key=lambda r: r.createdAt,
+        reverse=True,
+    )
+    matched_deposits = sorted(
+        (d for d in deposits if d.walletAddress == wallet_address),
+        key=lambda d: d.createdAt,
+        reverse=True,
+    )
+    return matched_donations, matched_transactions, matched_redemptions, matched_deposits
+
+
+def get_wallet_shares_held(campaign_id: str, wallet_address: str) -> int:
+    """Net investment shares this wallet has actually paid for on-chain minus
+    whatever it has already sold back -- independent of the shared demo
+    `investor_positions` entry, which isn't wallet-scoped (see buy_shares)."""
+    bought = sum(
+        t.shares
+        for t in onchain_transactions
+        if t.campaignId == campaign_id and t.walletAddress == wallet_address
+    )
+    sold = sum(
+        r.shares
+        for r in redemptions
+        if r.campaignId == campaign_id and r.walletAddress == wallet_address
+    )
+    return bought - sold
 
 
 def get_onchain_transactions(campaign_id: str) -> list[OnChainTransaction]:

@@ -6,6 +6,7 @@ import type {
   InvestorPosition,
   OnChainTransaction,
   ProjectStatus,
+  WalletBalance,
   WalletHistory,
 } from "./types";
 
@@ -92,8 +93,30 @@ export async function getWalletHistory(address: string): Promise<WalletHistory> 
       walletAddress: address,
       donations: [],
       investments: [],
+      redemptions: [],
+      deposits: [],
+      availableLamports: 0,
     }
   );
+}
+
+export async function getWalletBalance(address: string): Promise<WalletBalance> {
+  return (
+    (await apiGet<WalletBalance>(`/wallets/${encodeURIComponent(address)}/balance`)) ?? {
+      walletAddress: address,
+      availableLamports: 0,
+    }
+  );
+}
+
+/** Reports an already-completed real devnet payment from `address` to the AI
+ * agent's wallet, crediting `address`'s custodial ledger balance. */
+export async function depositToLedger(
+  address: string,
+  amountLamports: number,
+  txSignature: string
+): Promise<{ message: string; availableLamports: number }> {
+  return apiPost(`/wallets/${encodeURIComponent(address)}/deposit`, { amountLamports, txSignature });
 }
 
 export async function claimInvestmentReward(slug: string): Promise<number> {

@@ -54,7 +54,7 @@ async def chat(request: ChatRequest) -> StreamingResponse:
 
     async def event_stream():
         yield f"data: {json.dumps({'type': 'session', 'session_id': session_id})}\n\n"
-        async for event in stream_chat(session_id, request.message):
+        async for event in stream_chat(session_id, request.message, request.wallet_address):
             yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

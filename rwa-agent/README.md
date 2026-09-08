@@ -1,8 +1,15 @@
 # rwa-agent
 
-Automated **buy-side** AI agent for the RWA fundraising platform (hackathon
-`hackathon/README.md` §10 MCP tool list, phase 1: buy only, no `sell_rwa` /
-`get_market_data` yet).
+Automated **fund-manager** AI agent for the RWA fundraising platform,
+implementing the full `hackathon/README.md` §10 MCP tool list: buy, sell,
+risk scoring, and (as a stand-in for a live secondary market that doesn't
+exist here) funding-progress/holding market data. Reachable two ways —
+both call the exact same functions in `app/tools.py`:
+
+- The conversational, streaming chat loop below (`app/agent.py`, OpenAI
+  tool-calling).
+- A real **MCP server** (`app/mcp_server.py`) any MCP client (Claude
+  Desktop, another agent) can talk to directly — see **MCP server** below.
 
 The user talks to it like a chat assistant — stating budget, risk tolerance,
 preferred categories in plain language, over one or more messages — rather
@@ -22,6 +29,15 @@ than filling in a fixed form. When it has enough to act, the agent:
    conversation (e.g. "不用再問我，直接幫我下單"). Once confirmed, it pays
    for real: sends a real devnet SOL payment from its own keypair to the
    campaign treasury and records the purchase via `backend` (`buy_rwa`).
+5. Also watches campaigns it already holds: if a re-checked risk score rises
+   past what the user's stated risk tolerance would accept, or
+   `get_market_data` shows a campaign stalling near its deadline, or the
+   user just asks to exit, it proposes selling and — same confirm-first
+   rule as buying, with the same preauthorization escape hatch — calls
+   `sell_rwa` to redeem the holding back to the issuer for a real devnet SOL
+   refund. There's no secondary market/live price here, so a sell always
+   redeems at the same demo unit price it was bought at; it's an exit, not
+   a profit-taking trade.
 
 The LLM (OpenAI, via standard Chat Completions tool-calling, `stream=True`)
 only plans and narrates; every number that matters (risk score, balance,
@@ -131,6 +147,36 @@ instead of a raw traceback or a hung stream. If you hit this: use the web
 faucet's UI (different limits/anti-bot path than the raw RPC call) or have a
 teammate send SOL directly to the address from `GET /agent/status`.
 
+## MCP server
+
+`app/mcp_server.py` re-exports every tool in `app/tools.py`
+(`get_rwa_assets`, `get_risk_score`, `get_market_data`, `get_wallet_balance`,
+`buy_rwa`, `sell_rwa`) as a real MCP server over stdio, so any MCP client can
+drive this same wallet without going through the chat loop at all:
+
+```bash
+uv run rwa-agent-mcp
+# or: uv run python -m app.mcp_server
+```
+
+To use it from Claude Desktop (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "rwa-agent": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/rwa-agent", "run", "rwa-agent-mcp"]
+    }
+  }
+}
+```
+
+It still needs `backend` running and a valid `.env` (`FUNDRAISING_API_URL`,
+`SOLANA_RPC_URL`) the same as the chat app — this is a different transport
+for the exact same tools, not a separate sandboxed agent, so every call
+still sends real fundraising-api requests and real Solana devnet payments.
+
 ## Endpoints
 
 - `GET /` — the built-in chat page (`app/static/index.html`)
@@ -156,8 +202,15 @@ teammate send SOL directly to the address from `GET /agent/status`.
 uv run pytest -q
 ```
 
-Only `app/risk.py`'s scoring formula is unit-tested; the OpenAI loop and
-Solana payments are exercised manually against live devnet + `backend`.
+`app/risk.py`'s scoring formula and `app/tools.py`'s `get_market_data`/
+`sell_rwa` (mocked against `backend` via `respx`, no live network) are
+unit-tested offline. `tests/test_guardrails.py`,
+`tests/test_purchase_confirmation.py`, and `tests/test_sell_confirmation.py`
+exercise the system prompt's guardrails against the real model — opt in
+with `RUN_LIVE_AGENT_TESTS=1`. Solana payments themselves are exercised
+manually against live devnet + `backend` (`test_buy_shares.py` /
+`test_sell_shares.py` at the repo root — run directly with `python
+test_sell_shares.py`, not via pytest).
 
 Full request/response shapes for every endpoint here, `backend`, and
 the frontend's proxy route are in [`../API.md`](../API.md).

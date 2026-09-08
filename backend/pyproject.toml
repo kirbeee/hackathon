@@ -8,6 +8,8 @@ dependencies = [
     "flask>=3.1",
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
+    "solana>=0.34",
+    "solders>=0.21",
 ]
 
 [dependency-groups]

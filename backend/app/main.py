@@ -13,20 +13,27 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import store
+from app import chain_verify, store, treasury_wallet
 from app.models import (
     ActionResult,
     BuySharesRequest,
     Campaign,
     ConfigResponse,
     CreateCampaignRequest,
+    DepositRequest,
+    DepositResult,
     DonateRequest,
     Donation,
     InvestorPosition,
     OnChainTransaction,
+    SellRequest,
+    SellResult,
+    WalletBalanceResponse,
+    WalletDepositRecord,
     WalletDonationRecord,
     WalletHistoryResponse,
     WalletInvestmentRecord,
+    WalletRedemptionRecord,
 )
 
 app = FastAPI(title="Fundraising API", version="0.1.0")
@@ -102,7 +109,7 @@ def get_wallet_history(address: str) -> WalletHistoryResponse:
     """Every donation/investment purchase a wallet address paid for, across all
     campaigns -- keyed by the walletAddress reported alongside each payment's
     txSignature, not by any account/session (there isn't one in this demo)."""
-    donations, transactions = store.get_wallet_history(address)
+    donations, transactions, wallet_redemptions, wallet_deposits = store.get_wallet_history(address)
     campaigns_by_id = {c.id: c for c in store.list_campaigns()}
 
     return WalletHistoryResponse(
@@ -132,12 +139,79 @@ def get_wallet_history(address: str) -> WalletHistoryResponse:
             for t in transactions
             if t.campaignId in campaigns_by_id
         ],
+        redemptions=[
+            WalletRedemptionRecord(
+                campaignSlug=campaigns_by_id[r.campaignId].slug,
+                campaignTitle=campaigns_by_id[r.campaignId].title,
+                amountLamports=r.amountLamports,
+                shares=r.shares,
+                tierId=r.tierId,
+                txSignature=r.txSignature,
+                createdAt=r.createdAt,
+            )
+            for r in wallet_redemptions
+            if r.campaignId in campaigns_by_id
+        ],
+        deposits=[
+            WalletDepositRecord(
+                amountLamports=d.amountLamports,
+                txSignature=d.txSignature,
+                createdAt=d.createdAt,
+            )
+            for d in wallet_deposits
+        ],
+        availableLamports=store.get_ledger_balance(address),
     )
 
 
+@app.post("/wallets/{address}/deposit", response_model=DepositResult)
+async def deposit(address: str, body: DepositRequest) -> DepositResult:
+    """Reports an already-completed real devnet payment from `address` to the
+    AI agent's wallet, crediting `address`'s custodial ledger balance -- see
+    the "custodial ledger" section in app/store.py. Unlike buy-shares/donate
+    (whose recorded purchase is inert on its own), a credited ledger balance
+    can later leave the pool for real via a via_ledger-funded buy plus a
+    non-viaLedger sell, so txSignature is verified on-chain here, not just
+    trusted -- see app/chain_verify.py."""
+    if body.amountLamports <= 0:
+        raise HTTPException(status_code=400, detail="請輸入大於 0 的儲值金額。")
+    try:
+        await chain_verify.verify_spent_at_least(body.txSignature, address, body.amountLamports)
+    except chain_verify.TransferVerificationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    try:
+        balance = store.record_deposit(address, body.amountLamports, body.txSignature)
+    except store.ActionError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return DepositResult(message=f"已儲值 {body.amountLamports} lamports。", availableLamports=balance)
+
+
+@app.get("/wallets/{address}/balance", response_model=WalletBalanceResponse)
+def wallet_balance(address: str) -> WalletBalanceResponse:
+    return WalletBalanceResponse(walletAddress=address, availableLamports=store.get_ledger_balance(address))
+
+
+async def _verify_payment_if_redeemable(
+    tx_signature: str | None, wallet_address: str | None, min_lamports: int
+) -> None:
+    """Verifies tx_signature really moved at least min_lamports out of
+    wallet_address on-chain, when both are given -- see
+    app/chain_verify.py. A record made with only one of the two (or
+    neither) can never be matched by get_wallet_shares_held or
+    preview_redeem_donation's wallet_address filter, so it can never be
+    redeemed later either -- nothing to verify in that case."""
+    if not tx_signature or not wallet_address:
+        return
+    try:
+        await chain_verify.verify_spent_at_least(tx_signature, wallet_address, min_lamports)
+    except chain_verify.TransferVerificationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.post("/campaigns/{slug}/donate", response_model=ActionResult)
-def donate(slug: str, body: DonateRequest) -> ActionResult:
+async def donate(slug: str, body: DonateRequest) -> ActionResult:
     campaign = _require_campaign(slug)
+    await _verify_payment_if_redeemable(body.txSignature, body.walletAddress, store.LAMPORTS_PER_SHARE_UNIT)
     try:
         store.add_donation(
             campaign.id,
@@ -146,6 +220,7 @@ def donate(slug: str, body: DonateRequest) -> ActionResult:
             body.message,
             body.txSignature,
             body.walletAddress,
+            body.viaLedger,
         )
     except store.ActionError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -153,17 +228,83 @@ def donate(slug: str, body: DonateRequest) -> ActionResult:
 
 
 @app.post("/campaigns/{slug}/buy-shares", response_model=ActionResult)
-def buy_shares(slug: str, body: BuySharesRequest) -> ActionResult:
+async def buy_shares(slug: str, body: BuySharesRequest) -> ActionResult:
     campaign = _require_campaign(slug)
     if body.amount <= 0:
         raise HTTPException(status_code=400, detail="請輸入大於 0 的購買股數。")
+    min_lamports = body.amountLamports or body.amount * store.LAMPORTS_PER_SHARE_UNIT
+    await _verify_payment_if_redeemable(body.txSignature, body.walletAddress, min_lamports)
     try:
         store.buy_shares(
-            campaign.id, body.amount, body.txSignature, body.amountLamports, body.walletAddress
+            campaign.id,
+            body.amount,
+            body.txSignature,
+            body.amountLamports,
+            body.walletAddress,
+            body.viaLedger,
         )
     except store.ActionError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return ActionResult(message=f"已成功購買 {body.amount} 份 RWA Token。")
+
+
+@app.post("/campaigns/{slug}/sell", response_model=SellResult)
+async def sell(slug: str, body: SellRequest) -> SellResult:
+    """Sell shares back (investment campaigns) or cancel a pledge (reward
+    campaigns) at the same demo unit price it was bought at. No secondary
+    market/live price feed exists yet, so this is a treasury buyback, not a
+    market trade -- see app/store.py's sell/redeem section.
+
+    Normally the treasury wallet, not the caller, signs and sends the
+    refund, since only the treasury keypair here can move funds back out of
+    it; that's why this validates first, pays out, and only then mutates
+    campaign state -- a failed on-chain payment must never look like a
+    completed sale. A viaLedger sell skips the on-chain payment entirely and
+    credits walletAddress's custodial ledger balance instead, since that
+    holding was funded from the ledger rather than a real payment from
+    walletAddress in the first place (see app/store.py's custodial-ledger
+    section).
+    """
+    campaign = _require_campaign(slug)
+    if not body.walletAddress:
+        raise HTTPException(status_code=400, detail="請提供賣出的錢包地址。")
+
+    try:
+        if campaign.fundingModel == "investment":
+            if not body.amount or body.amount <= 0:
+                raise HTTPException(status_code=400, detail="請輸入大於 0 的賣出股數。")
+            lamports = store.preview_sell_shares(campaign.id, body.amount, body.walletAddress)
+        else:
+            if not body.tierId:
+                raise HTTPException(status_code=400, detail="請提供要取消的方案 tierId。")
+            donation, lamports = store.preview_redeem_donation(
+                campaign.id, body.tierId, body.walletAddress
+            )
+    except store.ActionError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    signature: str | None
+    if body.viaLedger:
+        store.credit_ledger(body.walletAddress, lamports)
+        signature = None
+    else:
+        try:
+            signature = await treasury_wallet.send_payment(body.walletAddress, lamports)
+        except treasury_wallet.InsufficientTreasuryFundsError as e:
+            raise HTTPException(status_code=502, detail=str(e))
+
+    refund_desc = f"已退回 {lamports} lamports 至你的可投資餘額" if body.viaLedger else f"退款 {lamports} lamports"
+
+    if campaign.fundingModel == "investment":
+        store.apply_sell_shares(campaign.id, body.amount)
+        store.record_redemption(campaign.id, lamports, body.amount, None, signature, body.walletAddress)
+        message = f"已賣出 {body.amount} 份 RWA Token，{refund_desc}。"
+    else:
+        store.apply_redeem_donation(donation, campaign.id, body.tierId)
+        store.record_redemption(campaign.id, lamports, 0, body.tierId, signature, body.walletAddress)
+        message = f"已取消此方案認購，{refund_desc}。"
+
+    return SellResult(message=message, amountLamports=lamports, txSignature=signature)
 
 
 @app.post("/campaigns/{slug}/claim-reward", response_model=ActionResult)

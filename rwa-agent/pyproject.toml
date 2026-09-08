@@ -1,7 +1,7 @@
 [project]
 name = "rwa-agent"
 version = "0.1.0"
-description = "Automated buy-side AI agent for the RWA fundraising platform: analyzes campaigns via fundraising-api, scores risk, and executes real Solana devnet payments to buy RWA tokens."
+description = "Automated fund-manager AI agent for the RWA fundraising platform: analyzes campaigns via fundraising-api, scores risk, and executes real Solana devnet payments to buy and sell/redeem RWA tokens. Also exposed as an MCP server (app/mcp_server.py)."
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",
@@ -12,7 +12,11 @@ dependencies = [
     "openai>=1.50",
     "solana>=0.34",
     "solders>=0.21",
+    "mcp>=1.2",
 ]
+
+[project.scripts]
+rwa-agent-mcp = "app.mcp_server:main"
 
 [dependency-groups]
 dev = [

@@ -114,8 +114,36 @@ export interface WalletInvestmentRecord {
   createdAt: string;
 }
 
+export interface WalletRedemptionRecord {
+  campaignSlug: string;
+  campaignTitle: string;
+  amountLamports: number;
+  shares: number;
+  tierId?: string;
+  // Absent for a viaLedger sell -- it settles by crediting the ledger
+  // balance instead of a real on-chain payment. See WalletBalance.
+  txSignature?: string;
+  createdAt: string;
+}
+
+export interface WalletDepositRecord {
+  amountLamports: number;
+  txSignature: string;
+  createdAt: string;
+}
+
 export interface WalletHistory {
   walletAddress: string;
   donations: WalletDonationRecord[];
   investments: WalletInvestmentRecord[];
+  redemptions: WalletRedemptionRecord[];
+  deposits: WalletDepositRecord[];
+  // Custodial ledger balance -- how much this wallet has deposited into the
+  // AI agent's pooled wallet and hasn't spent yet. See WalletBalance.
+  availableLamports: number;
+}
+
+export interface WalletBalance {
+  walletAddress: string;
+  availableLamports: number;
 }

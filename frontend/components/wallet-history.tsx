@@ -110,6 +110,13 @@ export function WalletHistory() {
 
       {!pending && state.status === "success" && state.data && (
         <div className="flex flex-col gap-8">
+          <section className="rounded-lg border border-border bg-surface/60 p-4">
+            <p className="text-xs text-foreground/50">AI Agent 可投資餘額（儲值後尚未花用的金額）</p>
+            <p className="mt-1 font-mono text-lg font-semibold text-foreground">
+              {(state.data.availableLamports / 1_000_000_000).toFixed(6)} SOL
+            </p>
+          </section>
+
           <section>
             <h2 className="mb-3 font-display text-lg font-semibold">
               兌換紀錄（{state.data.donations.length}）
@@ -187,6 +194,84 @@ export function WalletHistory() {
                       className="whitespace-nowrap font-mono text-xs text-brand-strong hover:underline"
                     >
                       {truncateSignature(t.txSignature)} ↗
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section>
+            <h2 className="mb-3 font-display text-lg font-semibold">
+              賣出／贖回紀錄（{state.data.redemptions.length}）
+            </h2>
+            {state.data.redemptions.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-foreground/50">
+                這個地址還沒有賣出／贖回紀錄。
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {state.data.redemptions.map((r, i) => (
+                  <li
+                    key={`${r.txSignature}-${i}`}
+                    className="flex flex-col gap-1 rounded-lg border border-border p-4 text-sm sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <Link
+                        href={`/campaigns/${r.campaignSlug}`}
+                        className="font-medium text-foreground hover:text-brand-strong hover:underline"
+                      >
+                        {r.campaignTitle}
+                      </Link>
+                      <p className="mt-0.5 text-xs text-foreground/50">
+                        {r.tierId ? `取消方案 ${r.tierId}` : `賣出 ${r.shares} 份`} ・{" "}
+                        {(r.amountLamports / 1_000_000_000).toFixed(6)} SOL 退款 ・{" "}
+                        {formatDate(r.createdAt)}
+                      </p>
+                    </div>
+                    {r.txSignature ? (
+                      <a
+                        href={`https://explorer.solana.com/tx/${r.txSignature}?cluster=devnet`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="whitespace-nowrap font-mono text-xs text-brand-strong hover:underline"
+                      >
+                        {truncateSignature(r.txSignature)} ↗
+                      </a>
+                    ) : (
+                      <span className="whitespace-nowrap text-xs text-foreground/40">已退回可投資餘額</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section>
+            <h2 className="mb-3 font-display text-lg font-semibold">
+              儲值紀錄（{state.data.deposits.length}）
+            </h2>
+            {state.data.deposits.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-foreground/50">
+                這個地址還沒有儲值紀錄。
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {state.data.deposits.map((d, i) => (
+                  <li
+                    key={`${d.txSignature}-${i}`}
+                    className="flex flex-col gap-1 rounded-lg border border-border p-4 text-sm sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <p className="text-xs text-foreground/50">
+                      儲值 {(d.amountLamports / 1_000_000_000).toFixed(6)} SOL ・ {formatDate(d.createdAt)}
+                    </p>
+                    <a
+                      href={`https://explorer.solana.com/tx/${d.txSignature}?cluster=devnet`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="whitespace-nowrap font-mono text-xs text-brand-strong hover:underline"
+                    >
+                      {truncateSignature(d.txSignature)} ↗
                     </a>
                   </li>
                 ))}

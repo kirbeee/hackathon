@@ -70,6 +70,7 @@ class Donation(BaseModel):
     createdAt: str
     txSignature: Optional[str] = None
     walletAddress: Optional[str] = None
+    redeemed: bool = False
 
 
 class OnChainTransaction(BaseModel):
@@ -82,6 +83,33 @@ class OnChainTransaction(BaseModel):
     txSignature: str
     createdAt: str
     walletAddress: Optional[str] = None
+
+
+class OnChainRedemption(BaseModel):
+    """A logged Solana devnet refund backing a sell/redeem action -- the
+    treasury-signed mirror image of OnChainTransaction. txSignature is None
+    for a viaLedger sell, which settles by crediting the wallet's ledger
+    balance instead of an on-chain payment (see SellRequest.viaLedger)."""
+
+    id: str
+    campaignId: str
+    amountLamports: int
+    shares: int
+    tierId: Optional[str] = None
+    txSignature: Optional[str] = None
+    createdAt: str
+    walletAddress: Optional[str] = None
+
+
+class OnChainDeposit(BaseModel):
+    """A logged Solana devnet payment topping up a wallet's ledger balance --
+    see the "custodial ledger" section in app/store.py."""
+
+    id: str
+    walletAddress: str
+    amountLamports: int
+    txSignature: str
+    createdAt: str
 
 
 class WalletDonationRecord(BaseModel):
@@ -103,10 +131,29 @@ class WalletInvestmentRecord(BaseModel):
     createdAt: str
 
 
+class WalletRedemptionRecord(BaseModel):
+    campaignSlug: str
+    campaignTitle: str
+    amountLamports: int
+    shares: int
+    tierId: Optional[str] = None
+    txSignature: Optional[str] = None
+    createdAt: str
+
+
+class WalletDepositRecord(BaseModel):
+    amountLamports: int
+    txSignature: str
+    createdAt: str
+
+
 class WalletHistoryResponse(BaseModel):
     walletAddress: str
     donations: list[WalletDonationRecord]
     investments: list[WalletInvestmentRecord]
+    redemptions: list[WalletRedemptionRecord] = []
+    deposits: list[WalletDepositRecord] = []
+    availableLamports: int = 0
 
 
 class Campaign(BaseModel):
@@ -140,6 +187,10 @@ class DonateRequest(BaseModel):
     message: str = ""
     txSignature: Optional[str] = None
     walletAddress: Optional[str] = None
+    # True when the AI agent is paying out of walletAddress's custodial
+    # ledger balance rather than walletAddress having signed a real payment
+    # itself -- see the "custodial ledger" section in app/store.py.
+    viaLedger: bool = False
 
 
 class BuySharesRequest(BaseModel):
@@ -147,6 +198,44 @@ class BuySharesRequest(BaseModel):
     txSignature: Optional[str] = None
     amountLamports: Optional[int] = None
     walletAddress: Optional[str] = None
+    viaLedger: bool = False
+
+
+class SellRequest(BaseModel):
+    """amount (investment campaigns) or tierId (reward campaigns) -- whichever
+    matches the campaign's fundingModel."""
+
+    amount: Optional[int] = None
+    tierId: Optional[str] = None
+    walletAddress: str
+    # True: credit the refund to walletAddress's ledger balance instead of
+    # sending a real on-chain payment (mirrors a ledger-funded buy/donate).
+    viaLedger: bool = False
+
+
+class SellResult(BaseModel):
+    message: str
+    amountLamports: int
+    txSignature: Optional[str] = None
+
+
+class DepositRequest(BaseModel):
+    """Reports an already-completed real devnet payment from walletAddress
+    to the AI agent's wallet, crediting walletAddress's custodial ledger
+    balance by the same amount."""
+
+    amountLamports: int
+    txSignature: str
+
+
+class DepositResult(BaseModel):
+    message: str
+    availableLamports: int
+
+
+class WalletBalanceResponse(BaseModel):
+    walletAddress: str
+    availableLamports: int
 
 
 class ConfigResponse(BaseModel):

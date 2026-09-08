@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useClient } from "@solana/react";
+import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
+import type { AppClient } from "@/app/providers";
+import { depositToAgentAction, lookupWalletBalanceAction } from "@/lib/actions";
+import { useTreasuryPayment } from "@/lib/use-treasury-payment";
 import { AgentHintGenie } from "./agent-hint-genie";
 
 interface Message {
@@ -31,8 +36,10 @@ const SUGGESTIONS = [
 const TOOL_LABELS: Record<string, string> = {
   get_rwa_assets: "查詢平台上的專案",
   get_risk_score: "計算專案風險分數",
-  get_wallet_balance: "查詢 AI Agent 錢包餘額",
+  get_market_data: "查詢募資進度與持有部位",
+  get_wallet_balance: "查詢可投資餘額",
   buy_rwa: "送出購買交易",
+  sell_rwa: "送出賣出／贖回交易",
 };
 
 function toolLabel(name?: string): string {
@@ -43,7 +50,7 @@ function MessageBubble({ message }: { message: Message }) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
-        <p className="max-w-[80%] rounded-lg bg-brand-soft px-4 py-2 text-sm text-brand-strong">
+        <p className="max-w-[80%] break-words rounded-lg bg-brand-soft px-4 py-2 text-sm text-brand-strong">
           {message.text}
         </p>
       </div>
@@ -52,7 +59,7 @@ function MessageBubble({ message }: { message: Message }) {
   if (message.role === "assistant") {
     return (
       <div className="flex">
-        <p className="max-w-[80%] whitespace-pre-wrap rounded-lg border border-border bg-surface px-4 py-3 text-sm leading-relaxed text-foreground/80">
+        <p className="max-w-[80%] whitespace-pre-wrap break-words rounded-lg border border-border bg-surface px-4 py-3 text-sm leading-relaxed text-foreground/80">
           {message.text}
         </p>
       </div>
@@ -61,7 +68,7 @@ function MessageBubble({ message }: { message: Message }) {
   if (message.role === "tool") {
     return (
       <div className="flex">
-        <p className="max-w-[85%] rounded-md border border-dashed border-border bg-surface/60 px-3 py-1.5 text-xs text-foreground/50">
+        <p className="max-w-[85%] break-words rounded-md border border-dashed border-border bg-surface/60 px-3 py-1.5 text-xs text-foreground/50">
           {message.text}
         </p>
       </div>
@@ -69,12 +76,14 @@ function MessageBubble({ message }: { message: Message }) {
   }
   return (
     <div className="flex">
-      <p className="max-w-[80%] rounded-lg border border-danger/40 px-4 py-2 text-sm font-medium text-danger">
+      <p className="max-w-[80%] break-words rounded-lg border border-danger/40 px-4 py-2 text-sm font-medium text-danger">
         {message.text}
       </p>
     </div>
   );
 }
+
+const LAMPORTS_PER_SOL = 1_000_000_000;
 
 export function AgentChat({ onClose }: { onClose?: () => void } = {}) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -83,6 +92,69 @@ export function AgentChat({ onClose }: { onClose?: () => void } = {}) {
   const sessionIdRef = useRef<string | null>(null);
   const nextId = useRef(0);
   const logRef = useRef<HTMLDivElement>(null);
+
+  const client = useClient<AppClient>();
+  const connected = useConnectedWallet(client);
+  const { pay } = useTreasuryPayment();
+
+  // Same reasoning as WalletHistory/WalletConnectButton: the wallet-standard
+  // adapter can resolve a stored connection before hydration finishes, so
+  // wait for mount before trusting it.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  const walletAddress = mounted && connected ? String(connected.account.address) : null;
+
+  const [agentAddress, setAgentAddress] = useState<string | null>(null);
+  const [ledgerLamports, setLedgerLamports] = useState<number | null>(null);
+  const [depositAmount, setDepositAmount] = useState("0.05");
+  const [depositing, setDepositing] = useState(false);
+  const [showDeposit, setShowDeposit] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/agent/status")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setAgentAddress(data?.address ?? null))
+      .catch(() => setAgentAddress(null));
+  }, []);
+
+  async function refreshLedgerBalance(address: string) {
+    const state = await lookupWalletBalanceAction(address);
+    if (state.status === "success") setLedgerLamports(state.availableLamports ?? 0);
+  }
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      if (walletAddress) void refreshLedgerBalance(walletAddress);
+      else setLedgerLamports(null);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [walletAddress]);
+
+  async function handleDeposit() {
+    if (!walletAddress || !agentAddress) return;
+    const sol = Number(depositAmount);
+    if (!Number.isFinite(sol) || sol <= 0) {
+      addMessage("error", "請輸入大於 0 的儲值金額。");
+      return;
+    }
+    const amountLamports = Math.round(sol * LAMPORTS_PER_SOL);
+    setDepositing(true);
+    try {
+      const signature = await pay(amountLamports, agentAddress);
+      const result = await depositToAgentAction({ walletAddress, amountLamports, txSignature: signature });
+      if (result.status === "error") throw new Error(result.message);
+      setLedgerLamports(result.availableLamports ?? null);
+      setShowDeposit(false);
+      addMessage("tool", `✓ 已儲值 ${sol} SOL 至可投資餘額`);
+    } catch (error) {
+      addMessage("error", error instanceof Error ? error.message : "儲值失敗，請稍後再試。");
+    } finally {
+      setDepositing(false);
+    }
+  }
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
@@ -112,7 +184,11 @@ export function AgentChat({ onClose }: { onClose?: () => void } = {}) {
       const res = await fetch("/api/agent/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, session_id: sessionIdRef.current }),
+        body: JSON.stringify({
+          message: text,
+          session_id: sessionIdRef.current,
+          wallet_address: walletAddress,
+        }),
       });
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => null);
@@ -142,6 +218,9 @@ export function AgentChat({ onClose }: { onClose?: () => void } = {}) {
             addMessage("tool", `🔍 ${toolLabel(event.name)}…`);
           } else if (event.type === "tool_result") {
             addMessage("tool", `✓ ${toolLabel(event.name)}`);
+            if (walletAddress && (event.name === "buy_rwa" || event.name === "sell_rwa")) {
+              void refreshLedgerBalance(walletAddress);
+            }
           } else if (event.type === "delta" && event.content) {
             if (assistantId === null) assistantId = addMessage("assistant", "");
             appendToMessage(assistantId, event.content);
@@ -170,6 +249,49 @@ export function AgentChat({ onClose }: { onClose?: () => void } = {}) {
           >
             ✕
           </button>
+        )}
+      </div>
+
+      <div className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-2">
+        {!walletAddress ? (
+          <p className="text-xs text-foreground/50">連接錢包後即可讓 AI Agent 用你的可投資餘額實際下單。</p>
+        ) : (
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-foreground/60">
+              可投資餘額：
+              <span className="font-mono font-medium text-foreground">
+                {ledgerLamports === null ? "…" : `${(ledgerLamports / LAMPORTS_PER_SOL).toFixed(4)} SOL`}
+              </span>
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowDeposit((v) => !v)}
+              className="rounded-full border border-border px-3 py-1 text-xs font-medium text-brand-strong transition hover:border-brand/50"
+            >
+              儲值
+            </button>
+          </div>
+        )}
+        {walletAddress && showDeposit && (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={depositAmount}
+              onChange={(e) => setDepositAmount(e.target.value)}
+              className="w-24 rounded-lg border border-border bg-surface px-2 py-1 text-xs text-foreground outline-none focus:border-brand"
+            />
+            <span className="text-xs text-foreground/50">SOL</span>
+            <button
+              type="button"
+              onClick={handleDeposit}
+              disabled={depositing || !agentAddress}
+              className="rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white transition hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {depositing ? "儲值中…" : "確認儲值"}
+            </button>
+          </div>
         )}
       </div>
 

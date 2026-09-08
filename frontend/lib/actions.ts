@@ -6,7 +6,9 @@ import {
   buyShares,
   claimInvestmentReward,
   createCampaign,
+  depositToLedger,
   donate,
+  getWalletBalance,
   getWalletHistory,
 } from "./campaigns";
 import { ApiError } from "./api-client";
@@ -296,5 +298,50 @@ export async function lookupWalletHistoryAction(address: string): Promise<Wallet
     return { status: "success", data };
   } catch (error) {
     return { status: "error", message: errorMessage(error, "查詢失敗，請稍後再試。") };
+  }
+}
+
+export interface WalletBalanceState {
+  status: "idle" | "success" | "error";
+  message?: string;
+  availableLamports?: number;
+}
+
+/** Looks up a wallet's AI-agent custodial ledger balance server-side (same
+ * reasoning as reportDonationAction: keeps the call to `backend` off the
+ * browser). */
+export async function lookupWalletBalanceAction(address: string): Promise<WalletBalanceState> {
+  const trimmed = address.trim();
+  if (!trimmed) {
+    return { status: "error", message: "請提供錢包地址。" };
+  }
+  try {
+    const { availableLamports } = await getWalletBalance(trimmed);
+    return { status: "success", availableLamports };
+  } catch (error) {
+    return { status: "error", message: errorMessage(error, "查詢餘額失敗，請稍後再試。") };
+  }
+}
+
+/**
+ * Reports an already-completed real devnet payment from `walletAddress` to
+ * the AI agent's pooled wallet, crediting `walletAddress`'s custodial
+ * ledger balance by the same amount. Server-side for the same reason as
+ * reportDonationAction (avoids the browser calling `backend` directly).
+ */
+export async function depositToAgentAction(input: {
+  walletAddress: string;
+  amountLamports: number;
+  txSignature: string;
+}): Promise<WalletBalanceState> {
+  try {
+    const { availableLamports } = await depositToLedger(
+      input.walletAddress,
+      input.amountLamports,
+      input.txSignature
+    );
+    return { status: "success", availableLamports };
+  } catch (error) {
+    return { status: "error", message: errorMessage(error, "儲值回報失敗，請稍後再試。") };
   }
 }

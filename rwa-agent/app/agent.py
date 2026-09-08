@@ -10,13 +10,25 @@ from typing import Any, AsyncGenerator
 from openai import AsyncOpenAI
 
 from app.settings import settings
-from app.tools import DISPATCH, TOOL_SCHEMAS
+from app.tools import DISPATCH, TOOL_SCHEMAS, USER_WALLET_TOOLS
 
 _client = AsyncOpenAI(api_key=settings.openai_api_key)
 
 _SYSTEM_PROMPT = """\
 你是 RWA 募資平台的個人基金經理人 AI Agent，用對話的方式跟使用者互動，任務是根據使用者的\
-投資偏好，自動買入合適的 RWA Token。你只負責買入，不負責賣出或監控後續市場變化。
+投資偏好，買入合適的 RWA Token，並在專案風險升高、募資停滯或使用者要求出場時，把持有的 RWA \
+Token 賣回（贖回）成 SOL。這個平台沒有次級市場、沒有即時成交價，所以「賣出」實際上是照原發行\
+單價向發行方贖回，不是市場交易；跟使用者說明時要用「贖回」而不是暗示有市場價差可賺。
+
+# 資金模式：使用者的可投資餘額，不是你自己的錢
+
+你是用「自己名下」一個共用的 Solana devnet 錢包幫所有使用者代操，但每個使用者實際能動用的\
+金額，是他們各自事先「儲值」進來、記在各自帳本裡的「可投資餘額」，不是這個共用錢包裡的總額。\
+get_wallet_balance() 會回傳兩個東西：userLedgerBalance（這個使用者自己的可投資餘額，這才是\
+你買賣時真正的預算上限）與 agentPooledWallet（整個共用錢包的餘額，只是背景資訊，不代表這個\
+使用者能動用的錢）。買賣的成本永遠只能扣打在 userLedgerBalance 上；如果 get_wallet_balance()\
+沒有回傳 userLedgerBalance（代表這個對話還沒有連接錢包），或是餘額不夠支付這筆交易，都要老實\
+跟使用者說明，並請他先連接錢包、儲值，不要假裝已經買了，也不要用共用錢包的餘額去合理化這筆交易。
 
 # 話題範圍（最高優先規則，優先於以下所有其他指示）
 
@@ -57,7 +69,8 @@ _SYSTEM_PROMPT = """\
 決定要分析或購買時的工作方式：
 1. 呼叫 get_rwa_assets() 取得目前所有募資中的 RWA 專案。
 2. 對候選專案呼叫 get_risk_score(slug) 取得風險分數，不要自己估計風險分數。
-3. 呼叫 get_wallet_balance() 確認目前可動用的 SOL 餘額，不足就老實跟使用者說，不要假裝買了。
+3. 呼叫 get_wallet_balance() 確認這個使用者目前可動用的可投資餘額（userLedgerBalance），\
+不足或尚未連接錢包就老實跟使用者說、請他先儲值，不要假裝買了。
 4. 根據使用者的風險承受度、偏好類別與單一資產最大配置比例，決定要買哪些專案、買多少。
 
 下單前一定要先讓使用者確認方案，除非使用者已經預先授權自動下單：
@@ -74,11 +87,37 @@ Solana devnet 付款與購買紀錄。使用者拒絕、想調整金額或改買
 風險承受度對應：low = 只買 Diversifier（risk score 低於 35）的專案；\
 medium = 可以買到 Supporter（65 分以內），若使用者明確想要更高上限也可以少量納入 Degen；\
 high = 三種分級都可以考慮，但 Degen 分數越高應該分配越少的預算。不要超出使用者的預算或單一資產配置上限。
+
+# 賣出（贖回）判斷方式
+
+除了買入，你也要留意使用者已持有的專案，在下列情況考慮建議賣出：
+- 重新呼叫 get_risk_score(slug) 後，分數或風險分級比使用者當初買入時能接受的上限明顯升高（例如\
+  原本設定 low 只接受 Diversifier，但專案分級或分數已經不再符合）。
+- get_market_data(slug) 顯示募資進度停滯、快到期限但 fundingProgressPct 仍然很低，顯示這個專案\
+  可能募不到、風險升高。
+- 使用者直接要求「賣掉」「贖回」「出場」某個專案，或要退出整個持倉。
+
+賣出的工作方式（跟買入的確認邏輯相同）：
+1. 呼叫 get_market_data(slug) 確認目前的持有量（investment 專案看 heldShares，reward 專案看\
+   heldTierIds）——不要自己假設持有多少，也不要嘗試賣出超過這裡回報的持有量。
+2. 需要時可再呼叫 get_risk_score(slug) 佐證為什麼建議賣出。
+3. 賣出前一定要先讓使用者確認，除非使用者已經預先授權自動賣出：把你建議賣出的專案、原因（風險\
+   分數變化或募資狀況）、預計贖回的份數或方案列成清楚的方案，問使用者要不要照做；這一則回覆裡\
+   不要呼叫 sell_rwa。例外：如果使用者說過「風險太高就自動幫我賣掉」「不用再問我，直接處理」\
+   之類的話，等於預先同意，可以跳過確認直接執行並事後說明。
+4. 使用者同意（或已預先授權）後，才對每個專案呼叫 sell_rwa(slug, amount, tier_id)。賣出份數不得\
+   超過 get_market_data 回報的持有量；使用者只想部分贖回時，照使用者指定的數量執行。
+5. 用中文說明贖回了什麼、金額多少、為什麼——記得跟使用者說明這是照原單價向發行方贖回，不是有\
+   市場價差的獲利了結。
 """
 
 # In-memory conversation history per session — resets on process restart,
 # same tradeoff fundraising-api already makes.
 _SESSIONS: dict[str, list[dict]] = {}
+# The human's connected wallet address, remembered per session so a
+# follow-up message that omits it (a client bug, or just not resending it)
+# doesn't lose track of whose ledger balance buy_rwa/sell_rwa should touch.
+_SESSION_WALLETS: dict[str, str] = {}
 
 
 def _get_session(session_id: str) -> list[dict]:
@@ -87,10 +126,22 @@ def _get_session(session_id: str) -> list[dict]:
     return _SESSIONS[session_id]
 
 
-async def stream_chat(session_id: str, user_message: str) -> AsyncGenerator[dict[str, Any], None]:
-    """Yields event dicts: delta / tool_call / tool_result / done / error."""
+async def stream_chat(
+    session_id: str, user_message: str, wallet_address: str | None = None
+) -> AsyncGenerator[dict[str, Any], None]:
+    """Yields event dicts: delta / tool_call / tool_result / done / error.
+
+    wallet_address is the human's own connected wallet (not the agent's
+    pooled devnet wallet) -- when set, it's injected into buy_rwa/sell_rwa/
+    get_wallet_balance/get_market_data calls as `user_wallet` so purchases
+    are attributed to and paid out of *this* user's custodial ledger
+    balance, never the LLM's own invention (it's not part of TOOL_SCHEMAS)."""
     messages = _get_session(session_id)
     messages.append({"role": "user", "content": user_message})
+
+    if wallet_address:
+        _SESSION_WALLETS[session_id] = wallet_address
+    user_wallet = _SESSION_WALLETS.get(session_id)
 
     try:
         for _ in range(10):  # hard cap so a confused model can't loop forever
@@ -156,8 +207,11 @@ async def stream_chat(session_id: str, user_message: str) -> AsyncGenerator[dict
                 yield {"type": "tool_call", "name": call["name"], "arguments": args}
 
                 func = DISPATCH[call["name"]]
+                call_kwargs = dict(args)
+                if call["name"] in USER_WALLET_TOOLS:
+                    call_kwargs["user_wallet"] = user_wallet
                 try:
-                    result = await func(**args)
+                    result = await func(**call_kwargs)
                 except Exception as e:  # noqa: BLE001 - surface failures to the model, not a crash
                     result = json.dumps({"error": str(e)})
 
