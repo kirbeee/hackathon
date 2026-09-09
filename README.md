@@ -249,12 +249,11 @@ User → Web Frontend → AI Agent → Wallet → Blockchain
 
 | 成員 | 負責項目 |
 | --- | --- |
-| LT | 使用者需求、提案、方向 |
 | Gimi | RWA 應用、競品、募資情境 |
 | Sean | Private Chain |
 | Ying | RWA、使用者情境 |
 | Amelie | AI Agent、Frontend |
-| Alex | 技術方向、資金經理人 Agent、數據與安全性 |
+| Alex（LT） | 使用者需求、提案、方向、技術方向、資金經理人 Agent、數據與安全性 |
 | 全員 | 商業模式、Demo、簡報 |
 
 **接下來需要補強**：RWA 市場數據與 Tokenization 案例、競品研究（銀行 RWA 服務、RWA Marketplace、AI Investment Agent 等）、安全性研究（Agent Wallet Security、Transaction Limit、KYC/AML、RWA 資產驗證）。
