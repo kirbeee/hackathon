@@ -493,6 +493,53 @@ def test_via_ledger_donate_debits_fixed_unit_price():
     assert client.get(f"/wallets/{wallet}/balance").json()["availableLamports"] == 0
 
 
+def test_via_ledger_buy_never_verifies_signature_against_the_credited_wallet(monkeypatch):
+    """Regression test: a viaLedger buy is paid by the agent's own pooled
+    wallet, not walletAddress -- pinning walletAddress as the expected
+    payer (as the real deposit/direct-buy checks do) would reject every
+    legitimate agent-paid purchase with a false "payer doesn't match"
+    error. The ledger debit itself (bounded by a previously verified
+    deposit) is what makes this safe without per-buy verification."""
+
+    slug = "friendly-citrus-orchard-transition"
+    wallet = "LedgerBuyerWalletGGGGGGGGGGGGGGGGGGGGGGGGG"
+    client.post(f"/wallets/{wallet}/deposit", json={"amountLamports": 2_000_000, "txSignature": "sig-dep-6"})
+
+    def _boom(*_args, **_kwargs):
+        raise AssertionError("must not verify a viaLedger buy's signature against walletAddress")
+
+    monkeypatch.setattr(chain_verify, "verify_spent_at_least", _boom)
+
+    res = client.post(
+        f"/campaigns/{slug}/buy-shares",
+        json={
+            "amount": 1,
+            "txSignature": "sig-agent-buy-3",
+            "amountLamports": 1_000_000,
+            "walletAddress": wallet,
+            "viaLedger": True,
+        },
+    )
+    assert res.status_code == 200
+
+
+def test_via_ledger_donate_never_verifies_signature_against_the_credited_wallet(monkeypatch):
+    slug = "artisan-mid-autumn-mooncake-box"
+    wallet = "LedgerDonorWalletHHHHHHHHHHHHHHHHHHHHHHHHH"
+    client.post(f"/wallets/{wallet}/deposit", json={"amountLamports": 1_000_000, "txSignature": "sig-dep-7"})
+
+    def _boom(*_args, **_kwargs):
+        raise AssertionError("must not verify a viaLedger donate's signature against walletAddress")
+
+    monkeypatch.setattr(chain_verify, "verify_spent_at_least", _boom)
+
+    res = client.post(
+        f"/campaigns/{slug}/donate",
+        json={"tierId": "t1", "txSignature": "sig-agent-donate-2", "walletAddress": wallet, "viaLedger": True},
+    )
+    assert res.status_code == 200
+
+
 def test_via_ledger_sell_credits_balance_without_treasury_payment(fake_treasury_payment):
     slug = "friendly-citrus-orchard-transition"
     wallet = "LedgerSellerWalletBBBBBBBBBBBBBBBBBBBBBBBB"

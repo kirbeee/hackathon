@@ -191,15 +191,22 @@ def wallet_balance(address: str) -> WalletBalanceResponse:
 
 
 async def _verify_payment_if_redeemable(
-    tx_signature: str | None, wallet_address: str | None, min_lamports: int
+    tx_signature: str | None, wallet_address: str | None, min_lamports: int, *, via_ledger: bool
 ) -> None:
     """Verifies tx_signature really moved at least min_lamports out of
     wallet_address on-chain, when both are given -- see
     app/chain_verify.py. A record made with only one of the two (or
     neither) can never be matched by get_wallet_shares_held or
     preview_redeem_donation's wallet_address filter, so it can never be
-    redeemed later either -- nothing to verify in that case."""
-    if not tx_signature or not wallet_address:
+    redeemed later either -- nothing to verify in that case.
+
+    Also skipped for via_ledger=True: there wallet_address is who's being
+    credited, not who paid -- the agent's own pooled wallet pays, on
+    wallet_address's behalf, out of a balance that only exists because a
+    *deposit* to that ledger was already verified this way. Pinning
+    wallet_address as the expected payer here would reject every
+    legitimate agent-paid purchase (it's never actually the payer)."""
+    if not tx_signature or not wallet_address or via_ledger:
         return
     try:
         await chain_verify.verify_spent_at_least(tx_signature, wallet_address, min_lamports)
@@ -210,7 +217,9 @@ async def _verify_payment_if_redeemable(
 @app.post("/campaigns/{slug}/donate", response_model=ActionResult)
 async def donate(slug: str, body: DonateRequest) -> ActionResult:
     campaign = _require_campaign(slug)
-    await _verify_payment_if_redeemable(body.txSignature, body.walletAddress, store.LAMPORTS_PER_SHARE_UNIT)
+    await _verify_payment_if_redeemable(
+        body.txSignature, body.walletAddress, store.LAMPORTS_PER_SHARE_UNIT, via_ledger=body.viaLedger
+    )
     try:
         store.add_donation(
             campaign.id,
@@ -232,7 +241,9 @@ async def buy_shares(slug: str, body: BuySharesRequest) -> ActionResult:
     if body.amount <= 0:
         raise HTTPException(status_code=400, detail="請輸入大於 0 的購買股數。")
     min_lamports = body.amountLamports or body.amount * store.LAMPORTS_PER_SHARE_UNIT
-    await _verify_payment_if_redeemable(body.txSignature, body.walletAddress, min_lamports)
+    await _verify_payment_if_redeemable(
+        body.txSignature, body.walletAddress, min_lamports, via_ledger=body.viaLedger
+    )
     try:
         store.buy_shares(
             campaign.id,
