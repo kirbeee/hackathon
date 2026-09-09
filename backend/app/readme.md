@@ -32,7 +32,6 @@ FastAPI 的進入點，建立 `app = FastAPI(...)`，設定 CORS，接收前端�
 - `POST /campaigns/{slug}/buy-shares`：購買投資型 RWA Token。
 - `POST /campaigns/{slug}/sell`：賣出／贖回 RWA Token（見下方「賣出／贖回」）。
 - `POST /campaigns/{slug}/claim-reward`：領取待領收益。
-- `POST /campaigns`：建立新的回饋型專案。
 - `GET /wallets/{address}/balance`：查詢這個錢包的可投資餘額（見下方「使用者資金帳本」）。
 - `POST /wallets/{address}/deposit`：回報一筆已完成的真實 devnet 儲值，入帳到可投資餘額。
 
@@ -50,7 +49,7 @@ FastAPI 的進入點，建立 `app = FastAPI(...)`，設定 CORS，接收前端�
 
 - 專案資料：`Campaign`、`RewardTier`、`InvestmentTerms`。
 - 投資與交易資料：`InvestorPosition`、`Donation`、`OnChainTransaction`、`OnChainRedemption`。
-- API 輸入輸出：`DonateRequest`、`BuySharesRequest`、`SellRequest`、`SellResult`、`CreateCampaignRequest`、`ConfigResponse`、`ActionResult`。
+- API 輸入輸出：`DonateRequest`、`BuySharesRequest`、`SellRequest`、`SellResult`、`ConfigResponse`、`ActionResult`。
 
 其中 `ProjectStatus` 的值為：
 
@@ -68,7 +67,6 @@ FastAPI 的進入點，建立 `app = FastAPI(...)`，設定 CORS，接收前端�
 - 回饋型專案的認購、數量與募資金額更新。
 - 投資型專案的 Token 購買、年度結算、收益領取與發行方買回。
 - Solana Demo 交易簽章紀錄。
-- 新專案建立與 slug 產生。
 - `reset_for_tests()` 測試重置功能。
 
 Solana 相關環境變數：

@@ -38,7 +38,6 @@ uv run pytest -q
 - `POST /campaigns/{slug}/donate` — back a reward tier: `{tierId, backerName, message}`
 - `POST /campaigns/{slug}/buy-shares` — buy investment shares: `{amount}`
 - `POST /campaigns/{slug}/claim-reward` — claim pending dividends
-- `POST /campaigns` — create a new reward-tier campaign
 
 All state resets when the process restarts. CORS is wide open (`*`) for local
 hackathon use across multiple frontend origins — tighten `CORS_ALLOW_ORIGINS`

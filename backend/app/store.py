@@ -8,8 +8,6 @@ but does not call that contract or any chain/wallet — it's a mock.
 from __future__ import annotations
 
 import os
-import re
-import unicodedata
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -22,7 +20,6 @@ from app.models import (
     OnChainRedemption,
     OnChainTransaction,
     RewardTier,
-    RewardTierInput,
 )
 
 _now = datetime.now(timezone.utc)
@@ -86,7 +83,6 @@ campaigns: list[Campaign] = []
 donations: list[Donation] = []
 investor_positions: list[InvestorPosition] = []
 
-_next_campaign_seq = 1
 _next_donation_seq = 1
 
 
@@ -508,8 +504,7 @@ def _seed() -> None:
         )
     )
 
-    global _next_campaign_seq, _next_donation_seq
-    _next_campaign_seq = len(campaigns) + 1
+    global _next_donation_seq
     _next_donation_seq = len(donations) + 1
 
 
@@ -947,87 +942,3 @@ def claim_investment_reward(campaign_id: str) -> float:
 
     position.pendingRewards = 0
     return amount
-
-
-# ---- campaign creation -------------------------------------------------------
-
-_GRADIENTS = [
-    "from-emerald-700 via-emerald-600 to-teal-500",
-    "from-neutral-800 via-neutral-700 to-neutral-600",
-    "from-stone-300 via-orange-100 to-white",
-    "from-emerald-100 via-green-50 to-white",
-    "from-neutral-300 via-neutral-200 to-neutral-100",
-    "from-stone-400 via-stone-300 to-stone-200",
-]
-
-
-def _slugify(title: str, existing: list[str]) -> str:
-    normalized = unicodedata.normalize("NFKD", title.strip().lower())
-    base = re.sub(r"[^\w]+", "-", normalized, flags=re.UNICODE).strip("-") or "campaign"
-
-    candidate = base
-    suffix = 1
-    while candidate in existing:
-        candidate = f"{base}-{suffix}"
-        suffix += 1
-    return candidate
-
-
-def create_campaign(
-    *,
-    title: str,
-    summary: str,
-    story: str,
-    category: str,
-    creatorName: str,
-    location: str,
-    durationDays: int,
-    rewardTiers: list[RewardTierInput],
-) -> Campaign:
-    global _next_campaign_seq
-
-    slug = _slugify(title, [c.slug for c in campaigns])
-    tiers: list[RewardTier] = []
-    for index, t in enumerate(rewardTiers):
-        symbol_seed = re.sub(r"[^A-Za-z0-9]", "X", title[:3].upper()) or "RWA"
-        tiers.append(
-            RewardTier(
-                id=f"t{index + 1}",
-                tokenSymbol=f"RWA-{symbol_seed}-{index + 1}",
-                title=t.title,
-                price=t.price,
-                description=t.description,
-                totalSupply=t.totalSupply,
-                claimed=0,
-                estimatedDelivery="上架方公告後通知",
-            )
-        )
-
-    campaign = Campaign(
-        id=f"c{_next_campaign_seq}",
-        slug=slug,
-        title=title,
-        summary=summary,
-        story=story,
-        category=category,
-        # New campaigns come in through the reward-tier creation form, which
-        # only ever produces physical-goods/product-perk offerings — always
-        # "supporter" tier (see RiskTier in app.models).
-        riskTier="supporter",
-        creatorName=creatorName,
-        location=location,
-        coverGradient=_GRADIENTS[len(campaigns) % len(_GRADIENTS)],
-        coverImage=None,
-        goalAmount=sum(t.price * t.totalSupply for t in tiers),
-        raisedAmount=0,
-        backerCount=0,
-        createdAt=datetime.now(timezone.utc).isoformat(),
-        deadline=_days(durationDays),
-        fundingModel="reward",
-        rewardTiers=tiers,
-        investment=None,
-    )
-    _next_campaign_seq += 1
-
-    campaigns.append(campaign)
-    return campaign

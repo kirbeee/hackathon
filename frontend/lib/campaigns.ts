@@ -125,21 +125,3 @@ export async function claimInvestmentReward(slug: string): Promise<number> {
   );
   return result.amount ?? 0;
 }
-
-export async function createCampaign(input: {
-  title: string;
-  summary: string;
-  story: string;
-  category: CampaignCategory;
-  creatorName: string;
-  location: string;
-  durationDays: number;
-  rewardTiers: Array<{
-    title: string;
-    price: number;
-    description: string;
-    totalSupply: number;
-  }>;
-}): Promise<Campaign> {
-  return apiPost<Campaign>("/campaigns", input);
-}

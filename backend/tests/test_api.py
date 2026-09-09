@@ -301,28 +301,6 @@ def test_claim_reward_rejects_when_nothing_pending():
     assert res.status_code == 400
 
 
-def test_create_campaign_gets_unique_id_and_slug():
-    payload = {
-        "title": "測試手作陶杯募資",
-        "summary": "職人手作陶杯，溫潤質感每日使用",
-        "story": "這是一段長度超過三十個字的詳細說明，用來測試建立募資專案的完整流程與驗證邏輯是否正常運作。",
-        "category": "design",
-        "creatorName": "測試工作室",
-        "location": "高雄市",
-        "durationDays": 30,
-        "rewardTiers": [
-            {"title": "陶杯一個", "price": 500, "description": "手工陶杯一個", "totalSupply": 100}
-        ],
-    }
-    res = client.post("/campaigns", json=payload)
-    assert res.status_code == 200
-    created = res.json()
-
-    all_ids = [c["id"] for c in client.get("/campaigns").json()]
-    assert len(all_ids) == len(set(all_ids)), "campaign ids must be unique"
-    assert created["id"] not in {"c1", "c2", "c3", "c4", "c5", "c6", "c7"}
-
-
 def test_sell_shares_refunds_and_updates_position(fake_treasury_payment):
     slug = "friendly-citrus-orchard-transition"
     wallet = "SellerWallet1111111111111111111111111111"
@@ -541,18 +519,3 @@ def test_via_ledger_sell_credits_balance_without_treasury_payment(fake_treasury_
 
     balance = client.get(f"/wallets/{wallet}/balance").json()
     assert balance["availableLamports"] == 1_000_000 + store.LAMPORTS_PER_SHARE_UNIT
-
-
-def test_create_campaign_rejects_short_story():
-    payload = {
-        "title": "夠長的標題測試",
-        "summary": "這是一段足夠長的簡介文字",
-        "story": "太短",
-        "category": "design",
-        "creatorName": "x",
-        "location": "x",
-        "durationDays": 30,
-        "rewardTiers": [{"title": "a", "price": 1, "description": "b", "totalSupply": 1}],
-    }
-    res = client.post("/campaigns", json=payload)
-    assert res.status_code == 400

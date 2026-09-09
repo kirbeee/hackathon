@@ -19,7 +19,6 @@ from app.models import (
     BuySharesRequest,
     Campaign,
     ConfigResponse,
-    CreateCampaignRequest,
     DepositRequest,
     DepositResult,
     DonateRequest,
@@ -315,44 +314,6 @@ def claim_reward(slug: str) -> ActionResult:
     except store.ActionError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return ActionResult(message=f"已領取分紅 {amount:,.0f} TWDT。", amount=amount)
-
-
-@app.post("/campaigns", response_model=Campaign)
-def create_campaign(body: CreateCampaignRequest) -> Campaign:
-    if len(body.title) < 4:
-        raise HTTPException(status_code=400, detail="專案標題至少需要 4 個字。")
-    if len(body.summary) < 10:
-        raise HTTPException(status_code=400, detail="請寫一段至少 10 個字的專案簡介。")
-    if len(body.story) < 30:
-        raise HTTPException(
-            status_code=400, detail="請寫一段至少 30 個字的發行說明，揭露資金用途與主要風險。"
-        )
-    if not body.creatorName:
-        raise HTTPException(status_code=400, detail="請填寫發起人或團隊名稱。")
-    if not body.location:
-        raise HTTPException(status_code=400, detail="請填寫執行地點。")
-    if not (7 <= body.durationDays <= 90):
-        raise HTTPException(status_code=400, detail="認購期間請設定在 7 到 90 天之間。")
-    if not body.rewardTiers:
-        raise HTTPException(status_code=400, detail="請至少新增一個 RWA Token 債權認購級距。")
-    for t in body.rewardTiers:
-        if len(t.title.strip()) < 2:
-            raise HTTPException(status_code=400, detail="每個方案都需要名稱。")
-        if t.price < 1:
-            raise HTTPException(status_code=400, detail="每個方案的金額需大於 0。")
-        if t.totalSupply < 1:
-            raise HTTPException(status_code=400, detail="每個方案的 Token 發行量需大於 0。")
-
-    return store.create_campaign(
-        title=body.title,
-        summary=body.summary,
-        story=body.story,
-        category=body.category,
-        creatorName=body.creatorName,
-        location=body.location,
-        durationDays=body.durationDays,
-        rewardTiers=body.rewardTiers,
-    )
 
 
 def _require_campaign(slug: str) -> Campaign:

@@ -1,11 +1,9 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
   buyShares,
   claimInvestmentReward,
-  createCampaign,
   depositToLedger,
   donate,
   getWalletBalance,
@@ -13,136 +11,15 @@ import {
 } from "./campaigns";
 import { ApiError } from "./api-client";
 import { rwaAmountForPayment } from "./rwa-payment";
-import type { CampaignCategory, PaymentCurrency, WalletHistory } from "./types";
-
-export interface CampaignFormState {
-  status: "idle" | "error";
-  message?: string;
-}
+import type { PaymentCurrency, WalletHistory } from "./types";
 
 export interface InvestmentActionState {
   status: "idle" | "success" | "error";
   message?: string;
 }
 
-const CATEGORIES: CampaignCategory[] = [
-  "agriculture",
-  "startup",
-  "lifestyle",
-  "tech",
-  "food",
-  "design",
-];
-
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof ApiError || error instanceof Error ? error.message : fallback;
-}
-
-interface ParsedTier {
-  title: string;
-  price: number;
-  description: string;
-  totalSupply: number;
-}
-
-function parseTiers(raw: string): ParsedTier[] | null {
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-
-    const tiers: ParsedTier[] = [];
-    for (const item of parsed) {
-      if (
-        typeof item?.title !== "string" ||
-        typeof item?.description !== "string" ||
-        typeof item?.price !== "number" ||
-        typeof item?.totalSupply !== "number"
-      ) {
-        return null;
-      }
-      tiers.push({
-        title: item.title,
-        description: item.description,
-        price: item.price,
-        totalSupply: item.totalSupply,
-      });
-    }
-    return tiers;
-  } catch {
-    return null;
-  }
-}
-
-export async function createCampaignAction(
-  _prevState: CampaignFormState,
-  formData: FormData
-): Promise<CampaignFormState> {
-  const title = String(formData.get("title") ?? "").trim();
-  const summary = String(formData.get("summary") ?? "").trim();
-  const story = String(formData.get("story") ?? "").trim();
-  const category = String(formData.get("category") ?? "") as CampaignCategory;
-  const creatorName = String(formData.get("creatorName") ?? "").trim();
-  const location = String(formData.get("location") ?? "").trim();
-  const durationDays = Number(formData.get("durationDays"));
-  const tiersRaw = String(formData.get("rewardTiersJson") ?? "");
-
-  if (title.length < 4) {
-    return { status: "error", message: "專案標題至少需要 4 個字。" };
-  }
-  if (summary.length < 10) {
-    return { status: "error", message: "請寫一段至少 10 個字的專案簡介。" };
-  }
-  if (story.length < 30) {
-    return { status: "error", message: "請寫一段至少 30 個字的發行說明，揭露資金用途與主要風險。" };
-  }
-  if (!CATEGORIES.includes(category)) {
-    return { status: "error", message: "請選擇一個專案分類。" };
-  }
-  if (!creatorName) {
-    return { status: "error", message: "請填寫發起人或團隊名稱。" };
-  }
-  if (!location) {
-    return { status: "error", message: "請填寫執行地點。" };
-  }
-  if (!Number.isFinite(durationDays) || durationDays < 7 || durationDays > 90) {
-    return { status: "error", message: "認購期間請設定在 7 到 90 天之間。" };
-  }
-
-  const tiers = parseTiers(tiersRaw);
-  if (!tiers || tiers.length === 0) {
-    return { status: "error", message: "請至少新增一個 RWA Token 債權認購級距。" };
-  }
-  for (const t of tiers) {
-    if (t.title.trim().length < 2) {
-      return { status: "error", message: "每個方案都需要名稱。" };
-    }
-    if (!Number.isFinite(t.price) || t.price < 1) {
-      return { status: "error", message: "每個方案的金額需大於 0。" };
-    }
-    if (!Number.isFinite(t.totalSupply) || t.totalSupply < 1) {
-      return { status: "error", message: "每個方案的 Token 發行量需大於 0。" };
-    }
-  }
-
-  let campaign;
-  try {
-    campaign = await createCampaign({
-      title,
-      summary,
-      story,
-      category,
-      creatorName,
-      location,
-      durationDays,
-      rewardTiers: tiers,
-    });
-  } catch (error) {
-    return { status: "error", message: errorMessage(error, "建立專案失敗，請稍後再試。") };
-  }
-
-  revalidatePath("/campaigns");
-  revalidatePath("/");
-  redirect(`/campaigns/${campaign.slug}`);
 }
 
 async function runInvestmentAction(

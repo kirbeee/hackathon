@@ -17,7 +17,6 @@ RWA（Real World Asset）群眾募資平台前端原型。讓小農地轉型、�
 - **贊助傳統商品類專案**：選一個 RWA Token 回饋方案，取得對應的商品／服務
 - **投資投資型專案**（機制對齊 `contractTest` 的 SafeHarvestNFT 合約）：購買股份、領取待領分紅
 - **切換顯示幣別**（TWD / USD，右上角切換器）：所有金額都可以換算對照顯示
-- **發起新的募資專案**（reward 型，可自訂多個 RWA Token 回饋方案）
 - **連接 Solana 錢包**（Phantom 等 Wallet Standard 相容錢包），贊助與購買股份時會透過錢包發送真實的 Devnet SOL 轉帳作為付款證明，交易可在 Solana Explorer 上查證
 
 ## 本地端怎麼起服務
@@ -118,7 +117,7 @@ Next.js 伺服器（frontend, :3000）
 
 三個對接點，對應 [`lib/api-client.ts`](lib/api-client.ts)、[`lib/campaigns.ts`](lib/campaigns.ts)、[`lib/use-treasury-payment.ts`](lib/use-treasury-payment.ts)、[`app/api/agent/chat/route.ts`](app/api/agent/chat/route.ts)：
 
-1. **`backend`（server-side 讀資料）** — `lib/api-client.ts` 的 `apiGet`/`apiPost` 依執行環境（`typeof window === "undefined"`）自動切換用 `FUNDRAISING_API_URL` 還是 `NEXT_PUBLIC_FUNDRAISING_API_URL`，`lib/campaigns.ts` 的每個函式都是包這兩個 helper。列專案、看詳情、贊助紀錄、持股狀態、發起專案都走這條路。
+1. **`backend`（server-side 讀資料）** — `lib/api-client.ts` 的 `apiGet`/`apiPost` 依執行環境（`typeof window === "undefined"`）自動切換用 `FUNDRAISING_API_URL` 還是 `NEXT_PUBLIC_FUNDRAISING_API_URL`，`lib/campaigns.ts` 的每個函式都是包這兩個 helper。列專案、看詳情、贊助紀錄、持股狀態都走這條路。
 2. **`backend`（client-side 付款）** — `lib/use-treasury-payment.ts` 的 `useTreasuryPayment()` hook 在瀏覽器端透過連上的 Solana 錢包（`app/providers.tsx` 的 wallet client）簽名送出真的 Devnet SOL 轉帳到 `NEXT_PUBLIC_SOLANA_TREASURY_ADDRESS`，拿到 `txSignature` 後再呼叫 `lib/campaigns.ts` 的 `apiPost`（此時走瀏覽器端，用 `NEXT_PUBLIC_FUNDRAISING_API_URL`）把交易記錄存進 `backend`。**這是唯一真的上鏈的方向**；領分紅呼叫的也只是 `backend` 的 mock 動作。
 3. **`rwa-agent`（AI Agent 聊天，走 proxy）** — `app/api/agent/chat/route.ts` 是唯一知道 `RWA_AGENT_URL` 的地方；瀏覽器只打同源的 `/api/agent/chat`，Next.js 伺服器把 request body 原封轉發給 `rwa-agent` 的 `POST /agent/chat`，再把回應的 `text/event-stream` body 原樣接回去（`upstream.body` 直接當 `Response` body 傳出）。這樣設計是因為 `rwa-agent` 的 8100 埠**不對外公開**，只有本機的 Next.js 伺服器連得到；瀏覽器端也完全不用管理 `RWA_AGENT_URL` 這個變數。連不上 `rwa-agent` 時回 `502 { error }`（JSON，不是 SSE）。
 
@@ -141,7 +140,7 @@ Next.js 伺服器（frontend, :3000）
 3. 回到網站右上角點「連接錢包」
 4. 進任一個專案，贊助或購買股份時會跳出 Phantom 簽名視窗——簽名後才會真的送出 0.001 SOL／份到平台的 Devnet 收款地址，並在專案頁的「鏈上交易紀錄」顯示、附上 Explorer 連結
 
-**沒接錢包也能逛**：瀏覽、搜尋、發起專案都不需要錢包；只有「贊助」跟「購買股份」這兩個花錢的動作會要求連接。
+**沒接錢包也能逛**：瀏覽、搜尋都不需要錢包；只有「贊助」跟「購買股份」這兩個花錢的動作會要求連接。
 
 ## 目前的範圍與限制（老實說）
 
@@ -170,13 +169,12 @@ app/                      Next.js App Router 頁面
   page.tsx                 首頁（Hero、熱門專案、RWA 流程圖、AI Agent 展示、支持者評價）
   campaigns/                探索專案（列表、篩選）
   campaigns/[slug]/         專案詳情（reward 或 investment 兩種版面）
-  campaigns/new/            發起專案表單
   providers.tsx             Solana wallet client provider
   api/agent/chat/route.ts   AI Agent 聊天 proxy（同源轉發到 rwa-agent）
 components/                UI 元件（campaign-card、donate-form、investment-panel、wallet-connect-button、currency…）
 lib/
   campaigns.ts              呼叫 backend 的資料讀取函式
-  actions.ts                Server Actions（發起專案、付款回報、領取分紅等）
+  actions.ts                Server Actions（付款回報、領取分紅等）
   api-client.ts             backend 的 fetch 封裝（Server 與 Client 皆可用）
   use-treasury-payment.ts   真實 Solana Devnet 付款的 hook
   types.ts                  對齊 backend 回傳格式的型別

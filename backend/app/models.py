@@ -244,24 +244,6 @@ class ConfigResponse(BaseModel):
     lamportsPerShareUnit: int
 
 
-class RewardTierInput(BaseModel):
-    title: str
-    price: float
-    description: str
-    totalSupply: int
-
-
-class CreateCampaignRequest(BaseModel):
-    title: str
-    summary: str
-    story: str
-    category: CampaignCategory
-    creatorName: str
-    location: str
-    durationDays: int
-    rewardTiers: list[RewardTierInput]
-
-
 class ActionResult(BaseModel):
     message: str
     amount: Optional[float] = None
