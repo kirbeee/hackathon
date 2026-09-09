@@ -1,5 +1,11 @@
 # rwa-agent
 
+[![FastAPI](https://img.shields.io/badge/FastAPI-agent_service-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-Tool_Calling-412991?style=flat-square&logo=openai&logoColor=white)](https://platform.openai.com/)
+[![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF?style=flat-square&logo=solana&logoColor=white)](https://solana.com/)
+[![uv](https://img.shields.io/badge/uv-package_manager-DE5FE9?style=flat-square&logo=uv&logoColor=white)](https://docs.astral.sh/uv/)
+
 Automated **fund-manager** AI agent for the RWA fundraising platform,
 implementing the full `hackathon/README.md` §10 MCP tool list: buy, sell,
 risk scoring, and (as a stand-in for a live secondary market that doesn't
