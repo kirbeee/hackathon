@@ -79,7 +79,11 @@ brew install cloudflared
 cloudflared tunnel --url http://localhost:3000
 ```
 
-終端機會印出一個 `https://<隨機字串>.trycloudflare.com` 網址，分享這個連結出去即可。`next.config.ts` 裡的 `allowedDevOrigins` 已經預先允許了 `*.trycloudflare.com`（Next.js dev server 預設只信任 `localhost`，沒開這個 quick tunnel 打開會直接 hydration 失敗），所以**不用額外設定**就能直接用；每次重開 tunnel 網址都會換，是正常現象——上一個 tunnel process 一旦關掉，舊網址就會永久顯示 502 Bad Gateway，不會自動復活。
+終端機會印出一個 `https://<隨機字串>.trycloudflare.com` 網址，分享這個連結出去即可。`next.config.ts` 裡的 `allowedDevOrigins` 已經預先允許了 `*.trycloudflare.com`（Next.js dev server 預設只信任 `localhost`，沒開這個 quick tunnel 打開會直接 hydration 失敗），所以**不用額外設定**就能直接用；每次重開 tunnel 網址都會換，是正常現象——上一個 tunnel process 一旦關掉，舊網址就會永久顯示 502 Bad Gateway（或 DNS 直接查不到），不會自動復活。
+
+> 如果 log 一直卡在 `failed to run the datagram handler` / `context canceled` 重試迴圈（QUIC 連不上，某些網路環境會這樣），加 `--protocol http2` 強制走 HTTP/2 通常就會正常連上：`cloudflared tunnel --protocol http2 --url http://localhost:3000`。
+
+**目前 demo 網址**：https://sku-previews-gain-sterling.trycloudflare.com/（2026-09-10 重啟，只要本機這個 tunnel process 還活著就有效；關掉終端機或電腦睡眠都會讓它失效，需要重新照上面步驟開一次）
 
 > 這個網址只代理你本機的 `frontend`（3000）。`backend`／`rwa-agent` 還是走 `127.0.0.1`，只有跑在同一台機器上的 Next.js 伺服器連得到——這也是為什麼 `/api/agent/chat` proxy 要存在（見下面「AI Agent 串接」）。
 
