@@ -11,13 +11,13 @@
 [![uv](https://img.shields.io/badge/uv-package_manager-DE5FE9?style=flat-square&logo=uv&logoColor=white)](https://docs.astral.sh/uv/)
 [![Status](https://img.shields.io/badge/status-hackathon_POC-orange?style=flat-square)](#10-disclaimer)
 
-> **AI Agent × RWA × Blockchain**
-
 ## 🔗 Live Demo
 
 **[https://sku-previews-gain-sterling.trycloudflare.com/](https://sku-previews-gain-sterling.trycloudflare.com/)**
 
 > 此為本機服務透過 Cloudflare Tunnel 對外公開的臨時網址，僅在展示期間開機運作時有效。若連不上，代表 tunnel 已關閉，請聯繫團隊重新啟動。
+
+> **AI Agent × RWA × Blockchain**
 
 ![alt text](./images/專案封面.png)
 
