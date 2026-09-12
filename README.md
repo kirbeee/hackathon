@@ -13,9 +13,11 @@
 
 ## 🔗 Live Demo
 
-**[https://sku-previews-gain-sterling.trycloudflare.com/](https://sku-previews-gain-sterling.trycloudflare.com/)**
+## [主要 Demo 網站](https://sku-previews-gain-sterling.trycloudflare.com/)
 
-> 此為本機服務透過 Cloudflare Tunnel 對外公開的臨時網址，僅在展示期間開機運作時有效。若連不上，代表 tunnel 已關閉，請聯繫團隊重新啟動。
+## [備用 Demo 網站：bypassaiattack.hacksigolonlab.org](https://bypassaiattack.hacksigolonlab.org/)
+
+> 兩個網站皆透過 Cloudflare Tunnel 連接本機服務，僅在展示期間服務與 tunnel 運作時可用。主要網址為臨時網址；若無法連線，可嘗試備用網站，或聯繫團隊確認服務狀態。
 
 > **AI Agent × RWA × Blockchain**
 

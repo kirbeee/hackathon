@@ -5,7 +5,11 @@ const nextConfig: NextConfig = {
   // default (only `localhost` is trusted). Without this, hydration silently
   // fails for anyone loading the app through the sandbox's own IP or a
   // Cloudflare quick tunnel (a new *.trycloudflare.com host each run).
-  allowedDevOrigins: ["203.145.205.92", "*.trycloudflare.com"],
+  allowedDevOrigins: [
+    "203.145.205.92",
+    "*.trycloudflare.com",
+    "bypassaiattack.hacksigolonlab.org",
+  ],
   images: {
     remotePatterns: [
       {
